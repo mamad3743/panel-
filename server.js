@@ -187,6 +187,8 @@ const fails={};
 const hostOf=req=>process.env.PUBLIC_HOST||process.env.RAILWAY_PUBLIC_DOMAIN||(req.headers['x-forwarded-host']||req.headers.host||'').split(':')[0];
 const J=(res,o,c=200)=>{res.writeHead(c,{'content-type':'application/json'});res.end(JSON.stringify(o))};
 const body=req=>new Promise(r=>{let b='';req.on('data',c=>{b+=c;if(b.length>1e5)req.destroy()});req.on('end',()=>{try{r(JSON.parse(b||'{}'))}catch(e){r({})}})});
+const cleanTg=x=>{x=String(x||'').trim().replace(/^https?:\/\/t\.me\//,'').replace(/^@/,'');return /^[A-Za-z0-9_]{3,40}$/.test(x)?x:''};
+const contact=()=>({support:db.settings.support!=null?db.settings.support:'mamadi1048',channel:db.settings.channel!=null?db.settings.channel:'editmamad_e'});
 const esc=s=>String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const cleanName=s=>String(s||'user').slice(0,30).replace(/[^\w\u0600-\u06FF -]/g,'').trim()||'user';
 const pubUser=(u,h,addr,withLinks)=>({days:dates14().map(d=>(u.days||{})[d]||0),id:u.id,name:u.name,on:u.on,created:u.created,limit:u.limit,exp:u.exp,used:u.used,note:u.note,status:status(u),...(withLinks?{links:linksFor(u,h,addr)}:{})});
@@ -203,12 +205,12 @@ http.createServer(async(req,res)=>{
     const st=status(x),L=st==='active'?linksFor(x,h,addr):[];
     if(!html){
       if(st!=='active'){res.writeHead(403,{'content-type':'text/plain'});return res.end(st)}
-      res.writeHead(200,{'content-type':'text/plain; charset=utf-8','profile-title':'BATAMN','profile-update-interval':'12',
+      res.writeHead(200,{'content-type':'text/plain; charset=utf-8','profile-title':'BATAMN','profile-update-interval':'12',...(contact().support?{'support-url':'https://t.me/'+contact().support}:{}),...(contact().channel?{'profile-web-page-url':'https://t.me/'+contact().channel}:{}),
         'subscription-userinfo':'upload=0; download='+x.used+'; total='+x.limit+'; expire='+(x.exp?Math.floor(x.exp/1000):0)});
       return res.end(Buffer.from(L.map(i=>i.l).join('\n')).toString('base64'));
     }
     const subUrl='https://'+h+'/sub/'+x.id+(addr?'?addr='+encodeURIComponent(addr):'');
-    const data={sub:subUrl,status:st,used:x.used,limit:x.limit,exp:x.exp,links:L.map(i=>({n:i.n,l:i.l,qr:qrSvg(i.l)}))};
+    const data={contact:contact(),sub:subUrl,status:st,used:x.used,limit:x.limit,exp:x.exp,links:L.map(i=>({n:i.n,l:i.l,qr:qrSvg(i.l)}))};
     const page=SUB.replace('__THEME__',db.settings.theme||'knight').replace(/__NAME__/g,()=>esc(x.name)).replace('__QR__',()=>st==='active'?qrSvg(subUrl):'').replace('__DATA__',()=>JSON.stringify(data).replace(/</g,'\\u003c'));
     return res.writeHead(200,{'content-type':'text/html; charset=utf-8','cache-control':'no-store'}),res.end(page);
   }
@@ -228,7 +230,7 @@ http.createServer(async(req,res)=>{
       pup:process.uptime(),load:os.loadavg(),conns,region:process.env.RAILWAY_REPLICA_REGION||process.env.RAILWAY_REGION||'—',
       xray:{on:!!(xray&&xray.exitCode===null),mem:xrayMem()}});
     if(u==='/api/state'){
-      const D=dates14();return J(res,{host:h,settings:{addr:db.settings.addr,theme:db.settings.theme||'knight',...repoCfg(),auto:!!db.settings.auto,hasToken:!!db.settings.token},version:curVersion(),inbounds:db.inbounds,daily:{dates:D,total:D.map(d=>(db.daily||{})[d]||0)},
+      const D=dates14();return J(res,{host:h,settings:{addr:db.settings.addr,theme:db.settings.theme||'knight',...contact(),...repoCfg(),auto:!!db.settings.auto,hasToken:!!db.settings.token},version:curVersion(),inbounds:db.inbounds,daily:{dates:D,total:D.map(d=>(db.daily||{})[d]||0)},
         users:db.users.map(x=>pubUser(x,h,addr,true)),totalUsed:db.users.reduce((a,x)=>a+x.used,0)});
     }
     const b=await body(req);
@@ -255,6 +257,7 @@ http.createServer(async(req,res)=>{
       if(b.branch!=null){const v=String(b.branch).trim();if(v&&!/^[\w./-]{1,60}$/.test(v))return J(res,{e:'برنچ نامعتبره'},400);db.settings.branch=v}
       if(b.token)db.settings.token=String(b.token).trim().slice(0,200);if(b.clearToken)delete db.settings.token;
       if(b.auto!=null)db.settings.auto=!!b.auto;
+      if(b.support!=null)db.settings.support=cleanTg(b.support);if(b.channel!=null)db.settings.channel=cleanTg(b.channel);
       if(b.addr!=null)db.settings.addr=cleanAddr(String(b.addr).trim());
       if(b.pass){if(String(b.pass).length<6)return J(res,{e:'رمز حداقل ۶ کاراکتر'},400);db.settings.pass=String(b.pass);db.secret=crypto.randomBytes(24).toString('hex');
         res.setHeader('Set-Cookie','bt='+mkToken()+'; HttpOnly; Secure; SameSite=Strict; Path=/; Max-Age=2592000')}

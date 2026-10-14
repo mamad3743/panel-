@@ -28,7 +28,7 @@ function bars(a,h,cls){var mx=Math.max.apply(null,a.concat([1])),n=a.length,w=10
  return '<rect x="'+(i*w+w*.14).toFixed(2)+'" y="'+(h-bh).toFixed(2)+'" width="'+(w*.72).toFixed(2)+'" height="'+bh.toFixed(2)+'" fill="'+(i==n-1?'var(--ac3)':'var(--ac)')+'" fill-opacity="'+(v?(i==n-1?1:.6):.14)+'"/>'}).join('')+'</svg>'}
 /* ---------- gate ---------- */
 function gate(p){loginFx(!p);$('login').className=p?'hide':'';$('panel').className=p?'wrap':'hide';$('dock').className=p?'dock':'dock hide';clearInterval(T1);clearInterval(T2);
- if(p){dock();loadState();sys();T1=setInterval(sys,3000);T2=setInterval(function(){if(TAB=='users'||TAB=='dash')loadState(1)},15000)}}
+ if(p){dock();$('view').innerHTML='<div class="sk"></div><div class="sk"></div><div class="sk"></div>';loadState();sys();T1=setInterval(sys,3000);T2=setInterval(function(){if(TAB=='users'||TAB=='dash')loadState(1)},15000)}}
 $('lf').onsubmit=function(e){e.preventDefault();$('err').textContent='';
  fetch('/api/login',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({pass:$('pw').value})}).then(function(r){
   if(r.ok){$('pw').value='';var l=$('login');l.classList.add('go');setTimeout(function(){l.classList.remove('go');gate(1)},750)}else r.json().then(function(d){$('err').textContent=d.e||'رمز اشتباهه'})})};
@@ -40,45 +40,51 @@ function bar(id,p){var e=$(id);if(!e)return;e.style.width=Math.min(100,Math.max(
 function put(id,v){var e=$(id);if(e)e.textContent=v}
 function spark(a,c){if(a.length<2)return'';var mx=Math.max.apply(null,a.concat([1])),w=300,h=60,p=a.map(function(v,i){return(i/(a.length-1)*w).toFixed(1)+','+(h-3-v/mx*(h-8)).toFixed(1)}).join(' ');
  return '<svg class="sp-l" viewBox="0 0 300 60" preserveAspectRatio="none"><polyline points="0,60 '+p+' 300,60" fill="'+c+'" fill-opacity=".12" stroke="none"/><polyline points="'+p+'" fill="none" stroke="'+c+'" stroke-width="1.8" vector-effect="non-scaling-stroke"/></svg>'}
+function gauge(id,p,t){var e=$('g_'+id);if(!e)return;var c=213.6;e.style.strokeDasharray=(Math.min(100,Math.max(0,p))/100*c).toFixed(1)+' '+c;e.setAttribute('class','pg'+(p>90?' d':p>75?' w':''));put('gv_'+id,t)}
 function sys(){api('GET','/api/sys').then(function(s){SYS=s;H.rx.push(s.net.rxs);H.tx.push(s.net.txs);if(H.rx.length>40){H.rx.shift();H.tx.shift()}
  $('xp').className='pill '+(s.xray.on?'ok':'bad');$('xp').lastChild.textContent=s.xray.on?'XRAY ONLINE':'XRAY OFFLINE';
  if(TAB!='dash')return;
- bar('cpuB',s.cpu);put('cpuT',s.cpu.toFixed(1)+'%  ·  '+s.cores+' vCPU');
- bar('ramB',s.mem.used/s.mem.total*100);put('ramT',B(s.mem.used)+' / '+B(s.mem.total));
- if(s.disk){bar('dskB',s.disk.used/s.disk.total*100);put('dskT',B(s.disk.used)+' / '+B(s.disk.total))}
+gauge('cpu',s.cpu,s.cpu.toFixed(0)+'%');put('cpuT',s.cpu.toFixed(1)+'%  ·  '+s.cores+' vCPU');
+ var rp=s.mem.used/s.mem.total*100;gauge('ram',rp,rp.toFixed(0)+'%');put('ramT',B(s.mem.used)+' / '+B(s.mem.total));
+ if(s.disk){var dp=s.disk.used/s.disk.total*100;gauge('dsk',dp,dp.toFixed(0)+'%');put('dskT',B(s.disk.used)+' / '+B(s.disk.total))}
+ put('ld',s.load.map(function(x){return x.toFixed(2)}).join(' '));
  put('rx',B(s.net.rxs)+'/s');put('tx',B(s.net.txs)+'/s');put('up',Dur(s.pup));put('cn',s.conns);put('xm',B(s.xray.mem));put('rg',s.region);put('cn2',s.conns);
  if($('spk'))$('spk').innerHTML=spark(H.rx,'#5b9bff')+spark(H.tx,'#4fd1a0')})}
 /* ---------- views ---------- */
 function render(){var v=$('view');v.classList.remove('vw');void v.offsetWidth;v.classList.add('vw');({dash:vDash,users:vUsers,inb:vInb,scan:vScan,set:vSet})[TAB](v)}
-function vDash(v){var act=S.users.filter(function(u){return u.status=='active'}).length;
- v.innerHTML='<div class="sg"><div class="sc"><small>USERS</small><b>'+S.users.length+'</b></div><div class="sc"><small>ACTIVE</small><b>'+act+'</b></div>'+
+function gg(id,l){return '<div class="gg"><svg viewBox="0 0 80 80"><circle class="tr" cx="40" cy="40" r="34"/><circle class="pg" id="g_'+id+'" cx="40" cy="40" r="34" stroke-dasharray="0 214"/></svg><b id="gv_'+id+'">—</b><small>'+l+'</small></div>'}
+function vDash(v){var act=S.users.filter(function(u){return u.status=='active'}).length,hr=new Date().getHours(),gr=hr<5?'شب بخیر':hr<12?'صبح بخیر':hr<18?'روز بخیر':'عصر بخیر';
+ v.innerHTML='<div class="hello"><small>'+gr+'</small><h2>Control Room</h2></div>'+
+ '<div class="sg"><div class="sc"><small>USERS</small><b>'+S.users.length+'</b></div><div class="sc"><small>ACTIVE</small><b>'+act+'</b></div>'+
  '<div class="sc"><small>TRAFFIC</small><b>'+B(S.totalUsed)+'</b></div><div class="sc"><small>CONNECTIONS</small><b id="cn2">'+(SYS?SYS.conns:'—')+'</b></div></div>'+
- trafficCard()+'<div class="g2"><div class="card"><h3><span>Server</span><span id="rg" style="letter-spacing:1px"></span></h3>'+
- '<div class="m"><div class="t"><span>CPU</span><b id="cpuT">—</b></div><div class="bar"><i id="cpuB"></i></div></div>'+
- '<div class="m"><div class="t"><span>RAM</span><b id="ramT">—</b></div><div class="bar"><i id="ramB"></i></div></div>'+
- '<div class="m"><div class="t"><span>Disk</span><b id="dskT">—</b></div><div class="bar"><i id="dskB"></i></div></div>'+
- '<div class="kv"><div><small>UPTIME</small><b id="up">—</b></div><div><small>XRAY RAM</small><b id="xm">—</b></div></div></div>'+
+ trafficCard()+'<div class="g2"><div class="card"><h3><span>Server</span><span id="rg" style="letter-spacing:1px"></span></h3><div class="gs">'+gg('cpu','CPU')+gg('ram','RAM')+gg('dsk','DISK')+'</div>'+
+ '<div class="kv"><div><small>CPU</small><b id="cpuT">—</b></div><div><small>RAM</small><b id="ramT">—</b></div><div><small>DISK</small><b id="dskT">—</b></div><div><small>UPTIME</small><b id="up">—</b></div><div><small>LOAD</small><b id="ld">—</b></div><div><small>XRAY RAM</small><b id="xm">—</b></div></div></div>'+
  '<div class="card"><h3><span>Network</span></h3><div class="kv" style="margin:0 0 8px"><div><small>DOWN ↓</small><b id="rx">—</b></div><div><small>UP ↑</small><b id="tx">—</b></div></div><div id="spk"></div></div></div>';
  v.insertAdjacentHTML('beforeend',topCard());if(SYS){sys()}}
 function trafficCard(){var d=S.daily,sum=d.total.reduce(function(a,b){return a+b},0);return '<div class="card" style="margin-bottom:14px"><h3><span>Traffic · 14 days</span></h3><div class="big"><b>'+B(sum)+'</b><span>امروز: '+B(d.total[d.total.length-1])+'</span></div>'+bars(d.total,60,'chart')+'<div class="axis"><span>'+d.dates[0].slice(5)+'</span><span>'+d.dates[d.dates.length-1].slice(5)+'</span></div></div>'}
 function topCard(){var l=S.users.slice().sort(function(a,b){return b.used-a.used}).slice(0,5),mx=Math.max.apply(null,l.map(function(u){return u.used}).concat([1]));
  return '<div class="card" style="margin-top:14px"><h3><span>Top users</span></h3>'+(l.length?l.map(function(u){return '<div class="t5"><span class="n">'+esc(u.name)+'</span><div class="bar"><i style="width:'+Math.max(2,u.used/mx*100)+'%"></i></div><span class="s">'+B(u.used)+'</span></div>'}).join(''):'<div class="empty">—</div>')+'</div>'}
 function uCard(u){var pct=u.limit?Math.min(100,u.used/u.limit*100):0,st={active:'فعال',off:'غیرفعال',expired:'منقضی',limited:'حجم تمام'}[u.status],
- cls=u.status=='active'?'ok':u.status=='off'?'':'bad',rem=u.exp?(u.exp>Date.now()?Math.ceil((u.exp-Date.now())/864e5)+' روز مانده':'منقضی شده'):'نامحدود';
- return '<div class="card u'+(u.status=='active'?'':' d')+'"><div class="h"><b>'+esc(u.name)+'</b><span class="pill '+cls+'"><i></i>'+st+'</span></div>'+
+ cls=u.status=='active'?'ok':u.status=='off'?'':'bad',rem=u.exp?(u.exp>Date.now()?Math.ceil((u.exp-Date.now())/864e5)+' روز مانده':'منقضی شده'):'نامحدود',td=u.days[u.days.length-1];
+ return '<div class="card u'+(u.status=='active'?'':' d')+'"><div class="h"><div class="av2">'+esc(u.name.charAt(0).toUpperCase())+'</div><div class="nm"><b>'+esc(u.name)+'</b><small>'+rem+'</small></div><span class="pill '+cls+'"><i></i>'+st+'</span></div>'+
  '<div class="ub"><i class="'+(pct>90?'d':pct>75?'w':'')+'" style="width:'+(u.limit?Math.max(2,pct):100)+'%;'+(u.limit?'':'opacity:.25')+'"></i></div>'+
- '<div class="um"><span><b>'+B(u.used)+'</b> / '+(u.limit?B(u.limit):'∞')+'</span><span>'+rem+'</span></div>'+'<div class="um" style="margin:0"><span>۱۴ روز اخیر</span><span>امروز: <b>'+B(u.days[u.days.length-1])+'</b></span></div>'+bars(u.days,24,'mini')+(u.note?'<div class="note">'+esc(u.note)+'</div>':'')+
+ '<div class="um"><span><b>'+B(u.used)+'</b> / '+(u.limit?B(u.limit):'∞')+'</span><span>امروز <b>'+B(td)+'</b></span></div>'+bars(u.days,24,'mini')+(u.note?'<div class="note">'+esc(u.note)+'</div>':'')+
  '<div class="chips">'+u.links.map(function(l){return '<span class="chip" data-a="cfg" data-i="'+u.id+'" data-k="'+l.k+'">'+esc(l.n)+'</span>'}).join('')+'</div>'+
  '<div class="ac"><button class="sm p" data-a="sub" data-i="'+u.id+'">لینک اشتراک</button><button class="sm" data-a="pg" data-i="'+u.id+'">صفحه</button><button class="sm" data-a="ed" data-i="'+u.id+'">ویرایش</button></div></div>'}
-function vUsers(v){v.innerHTML='<div class="sec"><h2>کاربران</h2><span class="pill">'+S.users.length+'</span></div><div class="tbar"><input id="q" placeholder="جستجو..." value="'+esc(Q)+'"><button class="btn" id="nu">+ جدید</button></div><div class="ug" id="ul"></div>';
- $('nu').onclick=newUser;$('q').oninput=function(){Q=this.value;ulist()};ulist()}
-function ulist(){var l=S.users.filter(function(u){return u.name.toLowerCase().indexOf(Q.toLowerCase())>=0});$('ul').innerHTML=l.length?l.map(uCard).join(''):'<div class="empty" style="grid-column:1/-1">کاربری پیدا نشد</div>'}
+var FL='all';
+function vUsers(v){var c={all:S.users.length,active:0,expired:0,off:0};S.users.forEach(function(u){if(u.status=='active')c.active++;else if(u.status=='off')c.off++;else c.expired++});
+ v.innerHTML='<div class="sec"><h2>کاربران</h2><span class="pill">'+S.users.length+'</span></div><div class="tbar"><input id="q" placeholder="جستجو..." value="'+esc(Q)+'"><button class="btn" id="nu">+ جدید</button></div>'+
+ '<div class="fch" id="fc">'+[['all','همه'],['active','فعال'],['expired','منقضی'],['off','غیرفعال']].map(function(f){return '<span class="fc'+(FL==f[0]?' on':'')+'" data-f="'+f[0]+'">'+f[1]+'<i>'+c[f[0]]+'</i></span>'}).join('')+'</div><div class="ug" id="ul"></div>';
+ $('nu').onclick=newUser;$('q').oninput=function(){Q=this.value;ulist()};$('fc').onclick=function(e){var t=e.target.closest('[data-f]');if(!t)return;FL=t.dataset.f;vUsers(v)};ulist()}
+function ulist(){var l=S.users.filter(function(u){var m=u.name.toLowerCase().indexOf(Q.toLowerCase())>=0,s=FL=='all'||(FL=='active'&&u.status=='active')||(FL=='off'&&u.status=='off')||(FL=='expired'&&(u.status=='expired'||u.status=='limited'));return m&&s});
+ $('ul').innerHTML=l.length?l.map(uCard).join(''):'<div class="empty" style="grid-column:1/-1">کاربری پیدا نشد</div>'}
 document.addEventListener('click',function(e){var b=e.target.closest('#ul [data-a]');if(!b)return;var i=b.dataset.i,a=b.dataset.a,u=S.users.filter(function(x){return x.id==i})[0];
  if(a=='cfg'){var l=u.links.filter(function(x){return x.k==b.dataset.k})[0];cp(l.l,l.n+' کپی شد')}
  if(a=='sub'){cp(subUrl(i),'لینک اشتراک کپی شد');qrModal(u)}
  if(a=='pg')window.open(subUrl(i),'_blank');
  if(a=='ed')editUser(u)});
 /* ---------- modals ---------- */
+function ask(msg,fn,ok){modal('تأیید','<p class="hint2" style="font-size:14px;margin:6px 0 16px">'+msg+'</p><div class="ac"><button class="sm x" id="ay">'+(ok||'بله، انجام بده')+'</button><button class="sm" id="an">انصراف</button></div>');$('ay').onclick=function(){closeM();fn()};$('an').onclick=closeM}
 function modal(title,html){$('md').innerHTML='<div class="card sheet"><h3><span>'+title+'</span><button class="x2" id="mx">×</button></h3>'+html+'</div>';$('md').className='ov';$('mx').onclick=closeM}
 function closeM(){$('md').className='ov hide'}
 $('md').onclick=function(e){if(e.target==$('md'))closeM()};
@@ -93,13 +99,13 @@ function editUser(u){var d=u.exp?new Date(u.exp).toISOString().slice(0,10):'';
  $('f5').onclick=function(){this.classList.toggle('on')};
  $('ok').onclick=function(){var v=$('f3').value;api('POST','/api/user/update',{id:u.id,name:$('f1').value,gb:+$('f2').value,exp:v?new Date(v+'T23:59:59').getTime():0,note:$('f4').value,on:$('f5').classList.contains('on')}).then(function(){closeM();toast('ذخیره شد');loadState()})};
  $('rs').onclick=function(){api('POST','/api/user/update',{id:u.id,reset:1}).then(function(){closeM();toast('ترافیک صفر شد');loadState()})};
- $('dl').onclick=function(){if(confirm('حذف شود؟'))api('POST','/api/user/del',{id:u.id}).then(function(){closeM();loadState()})}}
+ $('dl').onclick=function(){ask('کاربر «'+esc(u.name)+'» حذف بشه؟',function(){api('POST','/api/user/del',{id:u.id}).then(function(){toast('حذف شد');loadState()})})}}
 /* ---------- inbounds ---------- */
 function vInb(v){v.innerHTML='<div class="sec"><h2>اینباندها</h2><button class="sm p" id="ni">+ جدید</button></div><div class="card" id="il"></div><p class="hint2" style="margin-top:12px">همه اینباندها روی همون پورت ۴۴۳ دامنه کار می‌کنن و با مسیر (Path) از هم جدا می‌شن. gRPC و Reality روی Railway پشتیبانی نمی‌شن.</p>';
  $('il').innerHTML=S.inbounds.map(function(i){return '<div class="ib"><div class="g"><b>'+esc(i.name)+'</b><small>'+i.proto+' · '+i.net+' · '+esc(i.path)+'</small></div><div class="sw'+(i.on?' on':'')+'" data-t="'+i.id+'"></div><button class="sm x" data-d="'+i.id+'">حذف</button></div>'}).join('');
  $('il').onclick=function(e){var t=e.target.closest('[data-t]'),d=e.target.closest('[data-d]');
   if(t){var i=S.inbounds.filter(function(x){return x.id==t.dataset.t})[0];api('POST','/api/inbound/update',{id:i.id,on:!i.on}).then(function(){loadState()})}
-  if(d&&confirm('حذف شود؟'))api('POST','/api/inbound/del',{id:d.dataset.d}).then(function(){loadState()})};
+  if(d)ask('این اینباند حذف بشه؟',function(){api('POST','/api/inbound/del',{id:d.dataset.d}).then(function(){loadState()})})};
  $('ni').onclick=function(){var rp='/'+Math.random().toString(36).slice(2,8);
   modal('اینباند جدید','<span class="lab">نام</span><input id="f1" placeholder="مثلاً VLESS · Fast"><div class="row2"><div><span class="lab">پروتکل</span><select id="f2"><option>vless</option><option>vmess</option><option>trojan</option></select></div><div><span class="lab">ترنسپورت</span><select id="f3"><option value="ws">WebSocket</option><option value="httpupgrade">HTTPUpgrade</option></select></div></div><span class="lab">مسیر (Path)</span><input id="f4" value="'+rp+'" style="direction:ltr;text-align:left"><button class="btn" id="ok">ساخت</button>');
   $('ok').onclick=function(){api('POST','/api/inbounds',{name:$('f1').value,proto:$('f2').value,net:$('f3').value,path:$('f4').value}).then(function(){closeM();toast('ساخته شد');loadState()})}}}
@@ -113,13 +119,14 @@ function vScan(v){v.innerHTML='<div class="sec"><h2>اسکنر کلین‌آی�
 /* ---------- settings ---------- */
 function vSet(v){v.innerHTML='<div class="sec"><h2>تنظیمات</h2></div><div class="g2"><div class="card"><h3><span>آدرس پیش‌فرض کانفیگ‌ها</span></h3><p class="hint2">اگه کلین‌آی‌پی بذاری، توی همه لینک‌ها و اشتراک‌ها به‌جای دامنه استفاده می‌شه. خالی = خود دامنه.</p><input id="ad" value="'+esc(S.settings.addr||'')+'" placeholder="مثلاً 104.16.x.x" style="direction:ltr;text-align:left"><button class="btn" id="sa">ذخیره</button></div>'+
  '<div class="card"><h3><span>رمز پنل</span></h3><input id="np" type="password" placeholder="رمز جدید (حداقل ۶ کاراکتر)"><button class="btn" id="sp">تغییر رمز</button></div></div>'+
+ '<div class="card" style="margin-top:14px"><h3><span>Contact · صفحه اشتراک</span></h3><p class="hint2">این دو آیدی توی صفحه اشتراک کاربرها نمایش داده می‌شه. خالی = مخفی.</p><div class="row2"><input id="cs1" placeholder="پشتیبانی" value="'+esc(S.settings.support||'')+'" style="direction:ltr;text-align:left"><input id="cs2" placeholder="کانال" value="'+esc(S.settings.channel||'')+'" style="direction:ltr;text-align:left"></div><button class="btn" id="cs3">ذخیره</button></div>'+
  '<div class="card" style="margin-top:14px"><h3><span>Theme</span></h3><div class="thg">'+THEMES.map(function(t){return '<div class="th'+(S.settings.theme==t[0]?' on':'')+'" data-th="'+t[0]+'"><i style="background:'+t[2]+'"></i>'+t[1]+'</div>'}).join('')+'</div></div>'+
  '<div class="card" style="margin-top:14px"><h3><span>Update · GitHub</span><span id="uv" style="letter-spacing:1px;direction:ltr">'+(S.version.sha?S.version.sha.slice(0,7):'—')+' · '+S.version.src+'</span></h3>'+
  '<div class="hint2" id="ui">ریپو و برنچ رو بذار؛ هر وقت چیزی توی گیت‌هاب پوش کردی، از همین‌جا بدون ری‌دیپلوی نصب می‌شه.</div>'+
  '<input id="ur" placeholder="owner/repo" value="'+esc(S.settings.repo||'')+'" style="direction:ltr;text-align:left"><div class="row2"><input id="ub" placeholder="branch" value="'+esc(S.settings.branch||'main')+'" style="direction:ltr;text-align:left"><input id="ut" type="password" placeholder="'+(S.settings.hasToken?'توکن ذخیره شده':'Token (ریپو خصوصی)')+'" style="direction:ltr;text-align:left"></div>'+
  '<div class="ib" style="border:0;padding:2px 0 12px"><div class="g"><b>آپدیت خودکار</b><small style="direction:rtl;text-align:right">هر ۳۰ دقیقه چک و نصب می‌شه</small></div><div class="sw'+(S.settings.auto?' on':'')+'" id="ua"></div></div>'+
  '<div class="ac"><button class="sm" id="us">ذخیره</button><button class="sm" id="uc">بررسی</button><button class="sm p" id="ug">آپدیت</button></div></div>'+
- '<div class="card" style="margin-top:14px"><h3><span>About</span></h3><div class="kv"><div><small>HOST</small><b>'+esc(S.host)+'</b></div><div><small>VERSION</small><b>BATAMN 4.0</b></div></div><button class="ghost" id="lo" style="margin-top:14px;width:100%">خروج از پنل</button></div>';
+ '<div class="card" style="margin-top:14px"><h3><span>About</span></h3><div class="kv"><div><small>HOST</small><b>'+esc(S.host)+'</b></div><div><small>VERSION</small><b>BATAMN 5.0</b></div></div><div class="credit"><a href="https://t.me/mamadi1048" target="_blank" rel="noopener">@mamadi1048</a><a href="https://t.me/editmamad_e" target="_blank" rel="noopener">@editmamad_e</a></div><button class="ghost" id="lo" style="margin-top:14px;width:100%">خروج از پنل</button></div>';
  document.querySelector('.thg').onclick=function(e){var t=e.target.closest('[data-th]');if(!t)return;document.documentElement.dataset.theme=t.dataset.th;S.settings.theme=t.dataset.th;api('POST','/api/settings',{theme:t.dataset.th}).then(function(){toast('تم عوض شد');render()})};
  $('ua').onclick=function(){this.classList.toggle('on')};
  var usv=function(){return api('POST','/api/settings',{repo:$('ur').value,branch:$('ub').value,token:$('ut').value,auto:$('ua').classList.contains('on')})};
@@ -127,8 +134,9 @@ function vSet(v){v.innerHTML='<div class="sec"><h2>تنظیمات</h2></div><div
  $('uc').onclick=function(){var b=this;b.innerHTML='<span class="spin"></span>';usv().then(function(){return api('GET','/api/update/check')}).then(function(r){
    $('ui').innerHTML=(r.available?'<b style="color:var(--ok)">آپدیت جدید موجوده</b>':'<b>نسخه‌ات به‌روزه</b>')+'<br><span style="direction:ltr;display:inline-block">'+r.latest.sha.slice(0,7)+' · '+esc(r.latest.msg)+'</span>';
    b.textContent='بررسی'}).catch(function(){b.textContent='بررسی'})};
- $('ug').onclick=function(){if(!confirm('آپدیت از گیت‌هاب نصب بشه؟ پنل چند ثانیه ری‌استارت می‌شه.'))return;var b=this;b.innerHTML='<span class="spin"></span>';
-  usv().then(function(){return api('POST','/api/update/apply')}).then(function(r){toast('نصب شد؛ در حال ری‌استارت...');var n=0,t=setInterval(function(){n++;fetch('/api/me').then(function(x){if(x.ok){clearInterval(t);location.reload()}}).catch(function(){});if(n>40){clearInterval(t);location.reload()}},2000)}).catch(function(){b.textContent='آپدیت'})};
+ $('ug').onclick=function(){ask('آپدیت از گیت‌هاب نصب بشه؟ پنل چند ثانیه ری‌استارت می‌شه.',function(){var b=$('ug');b.innerHTML='<span class="spin"></span>';
+  usv().then(function(){return api('POST','/api/update/apply')}).then(function(r){toast('نصب شد؛ در حال ری‌استارت...');var n=0,t=setInterval(function(){n++;fetch('/api/me').then(function(x){if(x.ok){clearInterval(t);location.reload()}}).catch(function(){});if(n>40){clearInterval(t);location.reload()}},2000)}).catch(function(){b.textContent='آپدیت'})})};
+ $('cs3').onclick=function(){api('POST','/api/settings',{support:$('cs1').value,channel:$('cs2').value}).then(function(){toast('ذخیره شد');loadState(1)})};
  $('sa').onclick=function(){api('POST','/api/settings',{addr:$('ad').value}).then(function(){toast('ذخیره شد');loadState(1)})};
  $('sp').onclick=function(){api('POST','/api/settings',{pass:$('np').value}).then(function(){$('np').value='';toast('رمز عوض شد')})};
  $('lo').onclick=function(){fetch('/api/logout',{method:'POST'}).then(function(){gate(0)})}}
