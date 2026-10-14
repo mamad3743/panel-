@@ -296,3 +296,29 @@ input,button,select,textarea{font-family:inherit}
 [data-theme=light] input,[data-theme=light] select{background:rgba(255,255,255,.9);color:#0f1f38}
 [data-theme=light] .lg h1{color:#0f1f38}
 [data-theme=light] #toast{background:#0f1f38;color:#fff}
+
+/* ===== v9: new login design ===== */
+#login{background:radial-gradient(1000px 500px at 50% -10%,rgba(var(--rgb2),.35),transparent 60%),radial-gradient(800px 500px at 85% 110%,rgba(var(--rgb),.14),transparent 60%),var(--bg)}
+.lorb{position:absolute;border-radius:50%;filter:blur(100px);pointer-events:none;opacity:.55}
+.lorb.a{width:340px;height:340px;top:-100px;right:-80px;background:radial-gradient(circle,rgba(var(--rgb),.4),transparent 70%);animation:fl1 8s ease-in-out infinite}
+.lorb.b{width:300px;height:300px;bottom:-90px;left:-70px;background:radial-gradient(circle,rgba(var(--rgb2),.4),transparent 70%);animation:fl1 10s ease-in-out infinite reverse}
+.lgrid{position:absolute;inset:0;pointer-events:none;opacity:.5;background-image:linear-gradient(rgba(var(--lr),.06) 1px,transparent 1px),linear-gradient(90deg,rgba(var(--lr),.06) 1px,transparent 1px);background-size:44px 44px;mask-image:radial-gradient(ellipse 70% 60% at 50% 45%,#000 30%,transparent 75%);-webkit-mask-image:radial-gradient(ellipse 70% 60% at 50% 45%,#000 30%,transparent 75%)}
+.lg2{width:min(92vw,380px);text-align:center;padding:38px 28px 26px;position:relative;overflow:hidden;opacity:0;transform:translateY(26px);animation:lrise .9s .15s cubic-bezier(.2,.8,.2,1) forwards}
+@keyframes lrise{to{opacity:1;transform:none}}
+.lg2:before{content:"";position:absolute;left:14%;right:14%;top:0;height:1px;background:linear-gradient(90deg,transparent,var(--ac),transparent)}
+.lg2.shake{animation:lshake .45s}
+@keyframes lshake{20%{transform:translateX(-9px)}40%{transform:translateX(8px)}60%{transform:translateX(-5px)}80%{transform:translateX(4px)}}
+.lring{width:86px;height:86px;margin:0 auto 14px;border-radius:28px;display:flex;align-items:center;justify-content:center;background:linear-gradient(135deg,rgba(var(--rgb),.25),rgba(var(--rgb2),.12));border:1px solid rgba(var(--rgb),.4);box-shadow:0 0 40px rgba(var(--rgb),.25),inset 0 0 20px rgba(var(--rgb),.12)}
+.lring svg{width:52px;height:26px;color:var(--ac3);filter:drop-shadow(0 0 10px rgba(var(--rgb),.6))}
+.lg2 h1{margin:0;font-size:26px;font-weight:700;letter-spacing:.45em;padding-left:.45em;background:linear-gradient(180deg,#fff,rgba(var(--rgb),.85));-webkit-background-clip:text;background-clip:text;color:transparent}
+.lg2 p{margin:8px 0 26px;font-size:10px;letter-spacing:5px;color:var(--mu);font-family:var(--fm)}
+.lpass{position:relative;margin-bottom:12px}
+.lpass input{margin:0!important;padding-left:48px;text-align:center;letter-spacing:3px}
+.lpass input[type=text]{letter-spacing:1px}
+#eye{position:absolute;left:8px;top:50%;transform:translateY(-50%);width:34px;height:34px;border:0;border-radius:10px;background:transparent;font-size:16px;cursor:pointer;opacity:.7}
+#eye:hover{opacity:1;background:rgba(var(--rgb),.1)}
+.lg2 .btn{margin-top:2px}
+.lg2 .err{min-height:20px;color:var(--bad);font-size:12.5px;margin-top:10px}
+.lg2 .lgf{margin-top:12px;font-size:10px;letter-spacing:3px;color:var(--mu);opacity:.7}
+#login.go .lg2{animation:none;opacity:0;transform:scale(.94);transition:.45s}
+[data-theme=light] .lg2 h1{background:linear-gradient(180deg,#0f1f38,#3b82f6);-webkit-background-clip:text;background-clip:text;color:transparent}

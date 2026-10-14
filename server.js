@@ -180,14 +180,16 @@ setInterval(async()=>{
 
 // ---------- links ----------
 const cleanAddr=a=>a&&/^[\w.\-:\[\]]{1,100}$/.test(a)?a:'';
+const cleanLoc=s=>String(s||'').replace(/[\u0000-\u001F\u007F]/g,'').trim().slice(0,24);
 function linksFor(u,h,addr){
   const a=addr||db.settings.addr||h,q='security=tls&sni='+h+'&fp=chrome&alpn=http%2F1.1&host='+h;
   return db.inbounds.filter(i=>i.on).map(i=>{
-    const nm='BATAMN-'+u.name+'-'+i.name.replace(/\s*·\s*/g,'-'),p=encodeURIComponent(i.path);let l;
+    const loc=cleanLoc(i.loc),tag=(loc||i.name.replace(/\s*·\s*/g,'-')).slice(0,30);
+    const nm='BATAMN-'+u.name+'-'+tag,p=encodeURIComponent(i.path);let l;
     if(i.proto==='vmess')l='vmess://'+Buffer.from(JSON.stringify({v:'2',ps:nm,add:a,port:'443',id:u.id,aid:'0',scy:'auto',net:i.net,type:'none',host:h,path:i.path,tls:'tls',sni:h,alpn:'http/1.1',fp:'chrome'})).toString('base64');
     else if(i.proto==='trojan')l='trojan://'+u.id+'@'+a+':443?'+q+'&type='+i.net+'&path='+p+'#'+encodeURIComponent(nm);
     else l='vless://'+u.id+'@'+a+':443?encryption=none&'+q+'&type='+i.net+'&path='+p+'#'+encodeURIComponent(nm);
-    return{k:i.id,n:i.name,l};});
+    return{k:i.id,n:i.name,loc:loc,l};});
 }
 function qrSvg(t){
   if(!qrlib)return '';
@@ -296,7 +298,7 @@ http.createServer(async(req,res)=>{
     }
     const subUrl='https://'+hh+'/sub/'+x.id+(addr?'?addr='+encodeURIComponent(addr):'');
     const fb=cleanHost(db.settings.fallback)||'';
-    const data={id:x.id,online:onlineOf(x.id).length,maxDev:x.maxDev||0,contact:contact(),sub:subUrl,host:hh,fallback:fb,altSub:fb?'https://'+fb+'/sub/'+x.id+(addr?'?addr='+encodeURIComponent(addr):''):null,pay:{card:String(db.settings.payCard||'').slice(0,32),url:String(db.settings.payUrl||'').slice(0,200)},bot:cleanTg(db.settings.botUser||''),status:st,used:x.used,limit:x.limit,exp:x.exp,created:x.created,days:dates14().map(d=>((x.days||{})[d]||0)),links:L.map(i=>({n:i.n,l:i.l,qr:qrSvg(i.l)}))};
+    const data={id:x.id,online:onlineOf(x.id).length,maxDev:x.maxDev||0,contact:contact(),sub:subUrl,host:hh,fallback:fb,altSub:fb?'https://'+fb+'/sub/'+x.id+(addr?'?addr='+encodeURIComponent(addr):''):null,pay:{card:String(db.settings.payCard||'').slice(0,32),url:String(db.settings.payUrl||'').slice(0,200)},bot:cleanTg(db.settings.botUser||''),status:st,used:x.used,limit:x.limit,exp:x.exp,created:x.created,days:dates14().map(d=>((x.days||{})[d]||0)),links:L.map(i=>({n:i.n,loc:i.loc||'',l:i.l,qr:qrSvg(i.l)}))};
     const page=SUB.replace('__THEME__',db.settings.theme||'knight').replace(/__NAME__/g,()=>esc(x.name)).replace('__QR__',()=>st==='active'?qrSvg(subUrl):'').replace('__DATA__',()=>JSON.stringify(data).replace(/</g,'\\u003c'));
     return res.writeHead(200,{'content-type':'text/html; charset=utf-8','cache-control':'no-store'}),res.end(page);
   }
@@ -347,10 +349,10 @@ http.createServer(async(req,res)=>{
       if(db.inbounds.some(i=>i.path===pth))return J(res,{e:'این مسیر قبلاً استفاده شده'},400);
       if(!['vless','vmess','trojan'].includes(b.proto)||!['ws','httpupgrade'].includes(b.net))return J(res,{e:'نامعتبر'},400);
       const port=Math.max(10000,...db.inbounds.map(i=>i.port))+1;
-      db.inbounds.push({id:'i'+Date.now().toString(36),port,on:true,proto:b.proto,net:b.net,path:pth,name:String(b.name||(b.proto.toUpperCase()+' · '+b.net.toUpperCase())).slice(0,30)});
+      db.inbounds.push({id:'i'+Date.now().toString(36),port,on:true,proto:b.proto,net:b.net,path:pth,name:String(b.name||(b.proto.toUpperCase()+' · '+b.net.toUpperCase())).slice(0,30),loc:cleanLoc(b.loc)});
       save();restartSoon();return J(res,{ok:1})}
     if(u==='/api/inbound/update'){const i=db.inbounds.find(v=>v.id===b.id);if(!i)return J(res,{e:1},404);
-      if(b.on!=null)i.on=!!b.on;if(b.name)i.name=String(b.name).slice(0,30);save();restartSoon();return J(res,{ok:1})}
+      if(b.on!=null)i.on=!!b.on;if(b.name)i.name=String(b.name).slice(0,30);if(b.loc!=null)i.loc=cleanLoc(b.loc);save();restartSoon();return J(res,{ok:1})}
     if(u==='/api/inbound/del'){if(db.inbounds.length<=1)return J(res,{e:'حداقل یک اینباند لازمه'},400);db.inbounds=db.inbounds.filter(v=>v.id!==b.id);save();restartSoon();return J(res,{ok:1})}
     if(u==='/api/settings'){
       if(['knight','gotham','joker','light'].includes(b.theme))db.settings.theme=b.theme;

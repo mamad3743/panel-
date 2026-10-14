@@ -15,15 +15,9 @@ var AD=function(){return S.settings&&S.settings.addr?'?addr='+encodeURIComponent
 function subUrl(id){var h=(S.settings&&S.settings.host)?'https://'+S.settings.host:location.origin;return h+'/sub/'+id+AD()}
 /* ---------- fx & charts ---------- */
 var FX={on:false};
-function city(){var c=$('city');if(c.firstChild)return;var s='',x=0,h,i;while(x<400){var w=9+Math.random()*20;h=22+Math.random()*58;s+='<rect x="'+x+'" y="'+(100-h)+'" width="'+w+'" height="'+h+'"/>';
- for(i=0;i<3;i++)if(Math.random()>.6)s+='<rect class="w" x="'+(x+2+Math.random()*(w-6))+'" y="'+(100-h+4+Math.random()*(h-12))+'" width="1.6" height="1.8"/>';x+=w+.8}c.innerHTML=s}
-function loginFx(on){
- if(on&&!FX.on){FX.on=true;city();var cv=$('rain'),cx=cv.getContext('2d'),rgb=(getComputedStyle(document.documentElement).getPropertyValue('--rgb')||'91,155,255').trim();
-  var sz=function(){cv.width=innerWidth;cv.height=innerHeight};sz();window.onresize=sz;FX.d=[];for(var i=0;i<140;i++)FX.d.push({x:Math.random()*innerWidth,y:Math.random()*innerHeight,l:10+Math.random()*18,v:9+Math.random()*9});
-  (function loop(){if(!FX.on)return;cx.clearRect(0,0,cv.width,cv.height);cx.strokeStyle='rgba('+rgb+',.35)';cx.lineWidth=1;cx.beginPath();
-   FX.d.forEach(function(d){cx.moveTo(d.x,d.y);cx.lineTo(d.x-d.l*.18,d.y+d.l);d.y+=d.v;d.x-=d.v*.18;if(d.y>cv.height){d.y=-20;d.x=Math.random()*cv.width+40}});cx.stroke();FX.r=requestAnimationFrame(loop)})();
-  FX.t=setInterval(function(){var l=$('login'),f=function(ms){l.classList.add('fl');setTimeout(function(){l.classList.remove('fl')},ms)};f(110);setTimeout(function(){f(80)},230)},11000)}
- else if(!on&&FX.on){FX.on=false;cancelAnimationFrame(FX.r);clearInterval(FX.t)}}
+function loginFx(on){FX.on=!!on;var l=$('login');if(l)l.classList.toggle('fx',!!on)}
+function shakeLogin(){var f=$('lf');f.classList.remove('shake');void f.offsetWidth;f.classList.add('shake')}
+$('eye').onclick=function(){var p=$('pw');p.type=p.type=='password'?'text':'password';this.textContent=p.type=='password'?'👁':'🙈';p.focus()};
 function bars(a,h,cls){var mx=Math.max.apply(null,a.concat([1])),n=a.length,w=100/n;return '<svg class="'+cls+'" viewBox="0 0 100 '+h+'" preserveAspectRatio="none">'+a.map(function(v,i){var bh=Math.max(v?1.5:.7,v/mx*(h-2));
  return '<rect x="'+(i*w+w*.14).toFixed(2)+'" y="'+(h-bh).toFixed(2)+'" width="'+(w*.72).toFixed(2)+'" height="'+bh.toFixed(2)+'" fill="'+(i==n-1?'var(--ac3)':'var(--ac)')+'" fill-opacity="'+(v?(i==n-1?1:.6):.14)+'"/>'}).join('')+'</svg>'}
 /* ---------- gate ---------- */
@@ -31,7 +25,7 @@ function gate(p){loginFx(!p);$('login').className=p?'hide':'';$('panel').classNa
  if(p){dock();$('view').innerHTML='<div class="sk"></div><div class="sk"></div><div class="sk"></div>';loadState();sys();T1=setInterval(sys,3000);T2=setInterval(function(){if(TAB=='users'||TAB=='dash')loadState(1)},15000)}}
 $('lf').onsubmit=function(e){e.preventDefault();$('err').textContent='';
  fetch('/api/login',{method:'POST',headers:{'content-type':'application/json'},credentials:'same-origin',body:JSON.stringify({pass:$('pw').value})}).then(function(r){
-  if(r.ok){$('pw').value='';var l=$('login');l.classList.add('go');setTimeout(function(){l.classList.remove('go');gate(1)},750)}else r.json().then(function(d){$('err').textContent=d.e||'رمز اشتباهه'})})};
+  if(r.ok){$('pw').value='';var l=$('login');l.classList.add('go');setTimeout(function(){l.classList.remove('go');gate(1)},750)}else r.json().then(function(d){$('err').textContent=d.e||'رمز اشتباهه';shakeLogin()})})};
 function dock(){$('dock').innerHTML=TABS.map(function(t){return '<button data-t="'+t[0]+'" class="'+(t[0]==TAB?'on':'')+'"><svg viewBox="0 0 24 24">'+IC[t[0]]+'</svg>'+t[1]+'</button>'}).join('')}
 $('dock').onclick=function(e){var b=e.target.closest('button');if(!b)return;TAB=b.dataset.t;localStorage.tab=TAB;dock();render();window.scrollTo(0,0)};
 function loadState(quiet){return api('GET','/api/state'+AD()).then(function(d){S=d;if(!quiet||TAB!='users'||!document.querySelector('.ov:not(.hide)'))render()})}
@@ -78,7 +72,7 @@ function uCard(u){var pct=u.limit?Math.min(100,u.used/u.limit*100):0,st={active:
   return '<div class="card u'+(u.status=='active'?'':' d')+'"><div class="h"><input type="checkbox" class="uck" data-i="'+u.id+'"'+(SEL.has(u.id)?' checked':'')+'><div class="av2">'+esc(u.name.charAt(0).toUpperCase())+'</div><div class="nm"><b>'+esc(u.name)+'</b><small>'+rem+'</small></div><span class="pill '+cls+'"><i></i>'+st+'</span></div>'+
  '<div class="ub"><i class="'+(pct>90?'d':pct>75?'w':'')+'" style="width:'+(u.limit?Math.max(2,pct):100)+'%;'+(u.limit?'':'opacity:.25')+'"></i></div>'+
  '<div class="um"><span><b>'+B(u.used)+'</b> / '+(u.limit?B(u.limit):'∞')+'</span><span>امروز <b>'+B(td)+'</b></span></div>'+bars(u.days,24,'mini')+'<div class="um" style="margin-top:6px"><span>دستگاه آنلاین</span><span class="onc'+(u.online?' live':'')+'"><i></i><b class="onl" data-u="'+u.id+'">'+u.online+'</b> / '+(u.maxDev||'∞')+'</span></div>'+(u.note?'<div class="note">'+esc(u.note)+'</div>':'')+
- '<div class="chips">'+u.links.map(function(l){return '<span class="chip" data-a="cfg" data-i="'+u.id+'" data-k="'+l.k+'">'+esc(l.n)+'</span>'}).join('')+'</div>'+
+ '<div class="chips">'+u.links.map(function(l){return '<span class="chip" data-a="cfg" data-i="'+u.id+'" data-k="'+l.k+'">'+esc(l.loc||l.n)+'</span>'}).join('')+'</div>'+
  '<div class="ac"><button class="sm p" data-a="sub" data-i="'+u.id+'">لینک اشتراک</button><button class="sm" data-a="pg" data-i="'+u.id+'">صفحه</button><button class="sm" data-a="ed" data-i="'+u.id+'">ویرایش</button></div></div>'}
 var FL='all',SEL=new Set();
 function bulkUI(){var n=SEL.size,e=$('bulk');if(e)e.classList.toggle('on',n>0);var c=$('bcnt');if(c)c.textContent=n+' انتخاب'}
@@ -124,13 +118,16 @@ function editUser(u){var d=u.exp?new Date(u.exp).toISOString().slice(0,10):'';
  $('dl').onclick=function(){ask('کاربر «'+esc(u.name)+'» حذف بشه؟',function(){api('POST','/api/user/del',{id:u.id}).then(function(){toast('حذف شد');loadState()})})}}
 /* ---------- inbounds ---------- */
 function vInb(v){v.innerHTML='<div class="sec"><h2>اینباندها</h2><button class="sm p" id="ni">+ جدید</button></div><div class="card" id="il"></div><p class="hint2" style="margin-top:12px">همه اینباندها روی همون پورت ۴۴۳ دامنه کار می‌کنن و با مسیر (Path) از هم جدا می‌شن. gRPC و Reality روی Railway پشتیبانی نمی‌شن.</p>';
- $('il').innerHTML=S.inbounds.map(function(i){return '<div class="ib"><div class="g"><b>'+esc(i.name)+'</b><small>'+i.proto+' · '+i.net+' · '+esc(i.path)+'</small></div><div class="sw'+(i.on?' on':'')+'" data-t="'+i.id+'"></div><button class="sm x" data-d="'+i.id+'">حذف</button></div>'}).join('');
- $('il').onclick=function(e){var t=e.target.closest('[data-t]'),d=e.target.closest('[data-d]');
+ $('il').innerHTML=S.inbounds.map(function(i){return '<div class="ib"><div class="g"><b>'+esc(i.loc||i.name)+'</b><small>'+i.proto+' · '+i.net+' · '+esc(i.path)+(i.loc?' · '+esc(i.name):'')+'</small></div><div class="sw'+(i.on?' on':'')+'" data-t="'+i.id+'"></div><button class="sm" data-e="'+i.id+'">✏️</button><button class="sm x" data-d="'+i.id+'">حذف</button></div>'}).join('');
+ $('il').onclick=function(e){var t=e.target.closest('[data-t]'),d=e.target.closest('[data-d]'),w=e.target.closest('[data-e]');
   if(t){var i=S.inbounds.filter(function(x){return x.id==t.dataset.t})[0];api('POST','/api/inbound/update',{id:i.id,on:!i.on}).then(function(){loadState()})}
+  if(w){var j=S.inbounds.filter(function(x){return x.id==w.dataset.e})[0];
+   modal('ویرایش اینباند','<span class="lab">لوکیشن (توی اسم کانفیگ‌ها میاد — مثلاً 🇩🇪 آلمان)</span><input id="f1" value="'+esc(j.loc||'')+'" placeholder="🇩🇪 آلمان"><span class="lab">نام داخلی (فقط توی پنل)</span><input id="f2" value="'+esc(j.name)+'"><button class="btn" id="ok">ذخیره</button>');
+   $('ok').onclick=function(){api('POST','/api/inbound/update',{id:j.id,loc:$('f1').value,name:$('f2').value}).then(function(){closeM();toast('ذخیره شد');loadState()})}}
   if(d)ask('این اینباند حذف بشه؟',function(){api('POST','/api/inbound/del',{id:d.dataset.d}).then(function(){loadState()})})};
  $('ni').onclick=function(){var rp='/'+Math.random().toString(36).slice(2,8);
-  modal('اینباند جدید','<span class="lab">نام</span><input id="f1" placeholder="مثلاً VLESS · Fast"><div class="row2"><div><span class="lab">پروتکل</span><select id="f2"><option>vless</option><option>vmess</option><option>trojan</option></select></div><div><span class="lab">ترنسپورت</span><select id="f3"><option value="ws">WebSocket</option><option value="httpupgrade">HTTPUpgrade</option></select></div></div><span class="lab">مسیر (Path)</span><input id="f4" value="'+rp+'" style="direction:ltr;text-align:left"><button class="btn" id="ok">ساخت</button>');
-  $('ok').onclick=function(){api('POST','/api/inbounds',{name:$('f1').value,proto:$('f2').value,net:$('f3').value,path:$('f4').value}).then(function(){closeM();toast('ساخته شد');loadState()})}}}
+  modal('اینباند جدید','<span class="lab">نام</span><input id="f1" placeholder="مثلاً VLESS · Fast"><span class="lab">لوکیشن (توی اسم کانفیگ‌ها میاد — مثلاً 🇳🇱 هلند)</span><input id="f0" placeholder="🇳🇱 هلند"><div class="row2"><div><span class="lab">پروتکل</span><select id="f2"><option>vless</option><option>vmess</option><option>trojan</option></select></div><div><span class="lab">ترنسپورت</span><select id="f3"><option value="ws">WebSocket</option><option value="httpupgrade">HTTPUpgrade</option></select></div></div><span class="lab">مسیر (Path)</span><input id="f4" value="'+rp+'" style="direction:ltr;text-align:left"><button class="btn" id="ok">ساخت</button>');
+   $('ok').onclick=function(){api('POST','/api/inbounds',{name:$('f1').value,loc:$('f0').value,proto:$('f2').value,net:$('f3').value,path:$('f4').value}).then(function(){closeM();toast('ساخته شد');loadState()})}}}
 /* ---------- scanner ---------- */
 function vScan(v){v.innerHTML='<div class="sec"><h2>اسکنر کلین‌آی‌پی</h2></div><div class="card"><p class="hint2">چند آی‌پی تصادفی از رنج‌های CDN تست می‌شه و سریع‌ترین‌ها نشون داده می‌شن. پینگ از سمت سرور اندازه‌گیری می‌شه؛ آی‌پی‌ها رو بعداً توی کلاینتت هم امتحان کن.</p>'+
  '<span class="lab">SNI</span><input id="sn" value="speed.cloudflare.com" style="direction:ltr;text-align:left"><span class="lab">تعداد آی‌پی</span><select id="sc"><option>40</option><option selected>80</option><option>150</option></select><button class="btn" id="go">شروع اسکن</button></div><div class="card" id="rs" style="margin-top:14px;display:none"></div>';
