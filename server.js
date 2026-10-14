@@ -21,7 +21,7 @@ try{db=JSON.parse(fs.readFileSync(DBF))}catch(e){
 }
 function save(){fs.writeFileSync(DBF,JSON.stringify(db,null,1))}
 const F=n=>fs.readFileSync(path.join(__dirname,n));
-const STATIC={'/':['index.html','text/html; charset=utf-8'],'/style.css':['style.css','text/css'],'/app.js':['app.js','application/javascript'],'/bg.svg':['bg.svg','image/svg+xml']};
+const STATIC={'/':['index.html','text/html; charset=utf-8'],'/style.css':['style.css','text/css'],'/app.js':['app.js','application/javascript'],'/bg.svg':['bg.svg','image/svg+xml'],'/speed.js':['speed.js','application/javascript']};
 const FILES={};for(const k in STATIC)FILES[k]=F(STATIC[k][0]);
 const SUB=F('sub.html').toString();
 // fonts come from npm packages installed at build time and are served same-origin (works behind filtering)
@@ -43,7 +43,37 @@ function prune(){const cut=dayKey(Date.now()-35*864e5);for(const o of [db.daily|
 const expired=u=>u.exp>0&&Date.now()>u.exp, limited=u=>u.limit>0&&u.used>=u.limit;
 const status=u=>!u.on?'off':expired(u)?'expired':limited(u)?'limited':'active';
 const isActive=u=>status(u)==='active';
-const sig=()=>JSON.stringify([db.users.filter(isActive).map(u=>u.id),db.inbounds.filter(i=>i.on).map(i=>[i.id,i.proto,i.net,i.path,i.port])]);
+const sig=()=>JSON.stringify([db.users.filter(isActive).map(u=>u.id),db.inbounds.filter(i=>i.on).map(i=>[i.id,i.proto,i.net,i.path,i.port]),[...blocks.keys()]]);
+
+// ---------- online tracking (xray access log) + device limit ----------
+const ACC=path.join(DIR,'access.log'),WIN=120000;
+const online=new Map(),blocks=new Map();let accPos=0,ipSeen=0;
+try{fs.writeFileSync(ACC,'')}catch(e){}
+function ipKey(ip){ip=ip.replace(/^\[|\]$/g,'').replace(/^::ffff:/,'');
+  if(ip.includes(':')){const[h,t]=ip.split('::'),a=h?h.split(':'):[],b=t?t.split(':'):[];if(ip.includes('::'))while(a.length+b.length<8)a.push('0');
+    const f=a.concat(b).map(x=>parseInt(x||'0',16).toString(16)).slice(0,4);return{key:f.join(':'),rule:f.join(':')+'::/64'}}
+  return{key:ip,rule:ip}}
+function seen(uid,ip){const k=ipKey(ip),now=Date.now();let m=online.get(uid);if(!m)online.set(uid,m=new Map());const e=m.get(k.key);if(e)e.last=now;else m.set(k.key,{ip:k.key,rule:k.rule,first:now,last:now})}
+const onlineOf=uid=>{const m=online.get(uid),now=Date.now();return m?[...m.values()].filter(e=>now-e.last<WIN):[]};
+function parseAcc(txt){for(const line of txt.split('\n')){const m=/ from (?:tcp:|udp:)?(.+):\d+ accepted .* email: (\S+)\s*$/.exec(line);if(!m)continue;
+  const ip=m[1].replace(/^\[|\]$/g,'');if(ip==='127.0.0.1'||ip==='::1')continue;ipSeen=Date.now();seen(m[2],ip)}}
+function tailAcc(){fs.stat(ACC,(e,st)=>{if(e)return;if(st.size<accPos)accPos=0;
+  const now=Date.now();for(const[uid,m]of online){for(const[k,v]of m)if(now-v.last>WIN*2)m.delete(k);if(!m.size)online.delete(uid)}
+  if(st.size===accPos)return;
+  try{const len=Math.min(st.size-accPos,2e6),fd=fs.openSync(ACC,'r'),buf=Buffer.alloc(len);fs.readSync(fd,buf,0,len,accPos);fs.closeSync(fd);
+    const txt=buf.toString('utf8'),nl=txt.lastIndexOf('\n');if(nl<0){if(len>=2e6)accPos+=len;return}
+    accPos+=Buffer.byteLength(txt.slice(0,nl+1));parseAcc(txt.slice(0,nl));
+    if(accPos>8e6){try{fs.truncateSync(ACC,0);accPos=0}catch(_){}}}catch(_){}})}
+function enforce(){const now=Date.now();let ch=false;
+  for(const[k,b]of blocks)if(b.exp<now){blocks.delete(k);ch=true}
+  for(const u of db.users){if(!u.maxDev||!isActive(u))continue;
+    onlineOf(u.id).sort((a,b)=>a.first-b.first).slice(u.maxDev).forEach(e=>{const k=u.id+'|'+e.rule;if(!blocks.has(k)){blocks.set(k,{uid:u.id,rule:e.rule,exp:now+180000});ch=true}})}
+  if(ch)restartSoon()}
+const blockRules=()=>[...blocks.values()].map(b=>({type:'field',user:[b.uid],source:[b.rule],outboundTag:'block'}));
+function onlineSummary(){let devs=0,us=0;const per={},list=[];
+  for(const u of db.users){const o=onlineOf(u.id);if(o.length){us++;devs+=o.length;per[u.id]=o.length;list.push({name:u.name,ips:o.map(e=>e.ip),max:u.maxDev||0})}}
+  return{users:us,devices:devs,per,list:list.slice(0,30),track:Date.now()-ipSeen<600000}}
+setInterval(tailAcc,3000);setInterval(enforce,10000);
 
 // ---------- xray ----------
 let xray=null,lastSig='',rt=null;
@@ -54,13 +84,13 @@ function buildCfg(){
       :i.proto==='vmess'?{clients:cl.map(u=>({id:u.id,alterId:0,email:u.id}))}
       :{clients:cl.map(u=>({password:u.id,email:u.id}))};
     const ss={network:i.net};ss[i.net==='ws'?'wsSettings':'httpupgradeSettings']={path:i.path};
-    return{tag:i.id,listen:'127.0.0.1',port:i.port,protocol:i.proto,settings,streamSettings:ss,sniffing:{enabled:true,destOverride:['http','tls']}};
+    return{tag:i.id,listen:'127.0.0.1',port:i.port,protocol:i.proto,settings,streamSettings:ss,sniffing:{enabled:false}};
   });
   inb.push({tag:'api',listen:'127.0.0.1',port:10085,protocol:'dokodemo-door',settings:{address:'127.0.0.1'}});
-  return{log:{loglevel:'warning'},api:{tag:'api',services:['StatsService']},stats:{},
+  return{log:{loglevel:'warning',access:ACC},api:{tag:'api',services:['StatsService']},stats:{},
     dns:{servers:['1.1.1.1','8.8.8.8'],queryStrategy:'UseIPv4'},
     policy:{levels:{0:{handshake:4,connIdle:300,statsUserUplink:true,statsUserDownlink:true}}},
-    routing:{rules:[{type:'field',inboundTag:['api'],outboundTag:'api'}]},
+    routing:{rules:[...blockRules(),{type:'field',inboundTag:['api'],outboundTag:'api'}]},
     inbounds:inb,outbounds:[{protocol:'freedom',settings:{domainStrategy:'UseIPv4'}},{protocol:'blackhole',tag:'block'}]};
 }
 function startXray(){
@@ -184,6 +214,10 @@ const mkToken=()=>{const e=Date.now()+30*864e5;return e+'.'+sign(e)};
 const authed=req=>{const c=(req.headers.cookie||'').split(/;\s*/).find(x=>x.startsWith('bt='));if(!c)return false;
   const[e,s]=c.slice(3).split('.');return !!s&&+e>Date.now()&&crypto.timingSafeEqual(Buffer.from(sign(e)),Buffer.from(s.padEnd(64,'x').slice(0,64)))};
 const fails={};
+const clientIp=req=>{const x=String(req.headers['x-forwarded-for']||'').split(',').map(v=>v.trim()).filter(Boolean);return String(x[x.length-1]||req.headers['x-real-ip']||req.socket.remoteAddress||'').replace(/^::ffff:/,'')};
+// speed-test helpers (only for known active users or the logged-in admin)
+const SPBUF=crypto.randomBytes(65536),spQ={};
+const spOk=(ip,add)=>{const n=Date.now(),q=spQ[ip]||(spQ[ip]={b:0,t:n});if(n-q.t>60000){q.b=0;q.t=n}if(q.b+add>300e6)return false;q.b+=add;return true};
 const hostOf=req=>process.env.PUBLIC_HOST||process.env.RAILWAY_PUBLIC_DOMAIN||(req.headers['x-forwarded-host']||req.headers.host||'').split(':')[0];
 const J=(res,o,c=200)=>{res.writeHead(c,{'content-type':'application/json'});res.end(JSON.stringify(o))};
 const body=req=>new Promise(r=>{let b='';req.on('data',c=>{b+=c;if(b.length>1e5)req.destroy()});req.on('end',()=>{try{r(JSON.parse(b||'{}'))}catch(e){r({})}})});
@@ -191,7 +225,7 @@ const cleanTg=x=>{x=String(x||'').trim().replace(/^https?:\/\/t\.me\//,'').repla
 const contact=()=>({support:db.settings.support!=null?db.settings.support:'mamadi1048',channel:db.settings.channel!=null?db.settings.channel:'editmamad_e'});
 const esc=s=>String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const cleanName=s=>String(s||'user').slice(0,30).replace(/[^\w\u0600-\u06FF -]/g,'').trim()||'user';
-const pubUser=(u,h,addr,withLinks)=>({days:dates14().map(d=>(u.days||{})[d]||0),id:u.id,name:u.name,on:u.on,created:u.created,limit:u.limit,exp:u.exp,used:u.used,note:u.note,status:status(u),...(withLinks?{links:linksFor(u,h,addr)}:{})});
+const pubUser=(u,h,addr,withLinks)=>({days:dates14().map(d=>(u.days||{})[d]||0),maxDev:u.maxDev||0,online:onlineOf(u.id).length,id:u.id,name:u.name,on:u.on,created:u.created,limit:u.limit,exp:u.exp,used:u.used,note:u.note,status:status(u),...(withLinks?{links:linksFor(u,h,addr)}:{})});
 
 http.createServer(async(req,res)=>{
   const U=new URL(req.url,'http://x'),u=U.pathname,h=hostOf(req),addr=cleanAddr(U.searchParams.get('addr'));
@@ -199,6 +233,20 @@ http.createServer(async(req,res)=>{
   if(u.startsWith('/fonts/')){const f=fontFile(u.slice(7));if(!f){res.writeHead(404);return res.end()}res.writeHead(200,{'content-type':'font/woff2','cache-control':'public,max-age=31536000,immutable'});return fs.createReadStream(f).pipe(res)}
   if(u==='/health')return res.end('ok');
   if(u==='/qr'){const s=qrSvg((U.searchParams.get('d')||'').slice(0,1500));return res.writeHead(s?200:404,{'content-type':'image/svg+xml'}),res.end(s)}
+  if(u.startsWith('/speed/')){
+    const uid=U.searchParams.get('u'),okU=authed(req)||db.users.some(x=>x.id===uid&&isActive(x));
+    if(!okU){res.writeHead(403);return res.end()}
+    const ip=clientIp(req);
+    if(u==='/speed/ping'){res.writeHead(204,{'cache-control':'no-store'});return res.end()}
+    if(u==='/speed/down'){const n=Math.min(60e6,Math.max(1e5,+U.searchParams.get('bytes')||2e7));if(!spOk(ip,n)){res.writeHead(429);return res.end()}
+      res.writeHead(200,{'content-type':'application/octet-stream','cache-control':'no-store','content-length':n});let sent=0;
+      const pump=()=>{while(sent<n){const c=Math.min(65536,n-sent);sent+=c;if(!res.write(c===65536?SPBUF:SPBUF.subarray(0,c)))return res.once('drain',pump)}res.end()};
+      req.on('close',()=>{sent=n});pump();return}
+    if(u==='/speed/up'&&req.method==='POST'){if(!spOk(ip,12e6)){res.writeHead(429);return res.end()}let n=0;
+      req.on('data',c=>{n+=c.length;if(n>24e6)req.destroy()});req.on('end',()=>J(res,{ok:1,bytes:n}));req.on('error',()=>{});return}
+    res.writeHead(404);return res.end()}
+  const lv=/^\/sub\/([^/]+)\/live$/.exec(u);
+  if(lv){const x=db.users.find(v=>v.id===lv[1]);if(!x)return J(res,{e:1},404);return J(res,{online:onlineOf(x.id).length,max:x.maxDev||0,status:status(x)})}
   if(u.startsWith('/sub/')){
     const x=db.users.find(v=>v.id===u.slice(5)),html=(req.headers.accept||'').includes('text/html')&&!U.searchParams.has('raw');
     if(!x){res.writeHead(404,{'content-type':'text/plain'});return res.end('Not found')}
@@ -210,12 +258,12 @@ http.createServer(async(req,res)=>{
       return res.end(Buffer.from(L.map(i=>i.l).join('\n')).toString('base64'));
     }
     const subUrl='https://'+h+'/sub/'+x.id+(addr?'?addr='+encodeURIComponent(addr):'');
-    const data={contact:contact(),sub:subUrl,status:st,used:x.used,limit:x.limit,exp:x.exp,links:L.map(i=>({n:i.n,l:i.l,qr:qrSvg(i.l)}))};
+    const data={id:x.id,online:onlineOf(x.id).length,maxDev:x.maxDev||0,contact:contact(),sub:subUrl,status:st,used:x.used,limit:x.limit,exp:x.exp,links:L.map(i=>({n:i.n,l:i.l,qr:qrSvg(i.l)}))};
     const page=SUB.replace('__THEME__',db.settings.theme||'knight').replace(/__NAME__/g,()=>esc(x.name)).replace('__QR__',()=>st==='active'?qrSvg(subUrl):'').replace('__DATA__',()=>JSON.stringify(data).replace(/</g,'\\u003c'));
     return res.writeHead(200,{'content-type':'text/html; charset=utf-8','cache-control':'no-store'}),res.end(page);
   }
   if(u==='/api/login'&&req.method==='POST'){
-    const ip=(req.headers['x-forwarded-for']||req.socket.remoteAddress||'').split(',')[0],f=fails[ip]||{n:0,t:Date.now()};
+    const ip=clientIp(req),f=fails[ip]||{n:0,t:Date.now()};
     if(Date.now()-f.t>600000){f.n=0;f.t=Date.now()}
     if(f.n>=8)return J(res,{e:'تلاش زیاد. بعداً امتحان کن'},429);
     const b=await body(req);
@@ -227,7 +275,7 @@ http.createServer(async(req,res)=>{
     if(!authed(req))return J(res,{e:1},401);
     if(u==='/api/me')return J(res,{ok:1});
     if(u==='/api/sys')return J(res,{cpu:cpuPct,cores:+cpuCores.toFixed(1),mem:memInfo(),disk:diskInfo(),net:{rx:NS.rx,tx:NS.tx,rxs:NS.rxs,txs:NS.txs},
-      pup:process.uptime(),load:os.loadavg(),conns,region:process.env.RAILWAY_REPLICA_REGION||process.env.RAILWAY_REGION||'—',
+      pup:process.uptime(),load:os.loadavg(),conns,online:onlineSummary(),region:process.env.RAILWAY_REPLICA_REGION||process.env.RAILWAY_REGION||'—',
       xray:{on:!!(xray&&xray.exitCode===null),mem:xrayMem()}});
     if(u==='/api/state'){
       const D=dates14();return J(res,{host:h,settings:{addr:db.settings.addr,theme:db.settings.theme||'knight',...contact(),...repoCfg(),auto:!!db.settings.auto,hasToken:!!db.settings.token},version:curVersion(),inbounds:db.inbounds,daily:{dates:D,total:D.map(d=>(db.daily||{})[d]||0)},
@@ -235,10 +283,10 @@ http.createServer(async(req,res)=>{
     }
     const b=await body(req);
     if(u==='/api/users'){db.users.push({id:crypto.randomUUID(),name:cleanName(b.name),on:true,created:Date.now(),
-        limit:Math.max(0,+b.gb||0)*GB,exp:b.days>0?Date.now()+b.days*864e5:0,used:0,note:String(b.note||'').slice(0,100)});save();restartSoon();return J(res,{ok:1})}
+        limit:Math.max(0,+b.gb||0)*GB,exp:b.days>0?Date.now()+b.days*864e5:0,used:0,maxDev:Math.max(0,Math.floor(+b.maxDev||0)),note:String(b.note||'').slice(0,100)});save();restartSoon();return J(res,{ok:1})}
     if(u==='/api/user/update'){const x=db.users.find(v=>v.id===b.id);if(!x)return J(res,{e:1},404);
       if(b.name!=null)x.name=cleanName(b.name);if(b.gb!=null)x.limit=Math.max(0,+b.gb||0)*GB;if(b.exp!=null)x.exp=Math.max(0,+b.exp||0);
-      if(b.note!=null)x.note=String(b.note).slice(0,100);if(b.on!=null)x.on=!!b.on;if(b.reset)x.used=0;save();restartSoon();return J(res,{ok:1})}
+      if(b.note!=null)x.note=String(b.note).slice(0,100);if(b.maxDev!=null)x.maxDev=Math.max(0,Math.floor(+b.maxDev||0));if(b.on!=null)x.on=!!b.on;if(b.reset)x.used=0;save();restartSoon();return J(res,{ok:1})}
     if(u==='/api/user/del'){db.users=db.users.filter(v=>v.id!==b.id);save();restartSoon();return J(res,{ok:1})}
     if(u==='/api/inbounds'){
       const pth=String(b.path||'').trim();
@@ -271,10 +319,10 @@ http.createServer(async(req,res)=>{
 }).on('upgrade',(req,sock,head)=>{
   const p=db.inbounds.find(x=>x.on&&(req.url===x.path||req.url.startsWith(x.path+'?')||req.url.startsWith(x.path+'/')));
   if(!p)return sock.destroy();
-  const up=net.connect(p.port,'127.0.0.1',()=>{
+  const cip=clientIp(req),up=net.connect(p.port,'127.0.0.1',()=>{
     let s=req.method+' '+req.url+' HTTP/1.1\r\n';
-    for(let i=0;i<req.rawHeaders.length;i+=2)s+=req.rawHeaders[i]+': '+req.rawHeaders[i+1]+'\r\n';
-    up.write(s+'\r\n');if(head&&head.length)up.write(head);sock.pipe(up);up.pipe(sock)});
+    for(let i=0;i<req.rawHeaders.length;i+=2){const k=req.rawHeaders[i].toLowerCase();if(k==='x-forwarded-for'||k==='x-real-ip'||k==='forwarded')continue;s+=req.rawHeaders[i]+': '+req.rawHeaders[i+1]+'\r\n'}
+    up.write(s+'X-Forwarded-For: '+cip+'\r\n\r\n');if(head&&head.length)up.write(head);sock.pipe(up);up.pipe(sock)});
   conns++;let done=false;const end=()=>{if(!done){done=true;conns--}sock.destroy();up.destroy()};
   sock.setNoDelay(true);up.setNoDelay(true);sock.setKeepAlive(true,30000);
   up.on('error',end);sock.on('error',end);up.on('close',end);sock.on('close',end);

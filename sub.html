@@ -14,6 +14,7 @@
     <div class="tiles">
       <div class="tile"><small>USED</small><b id="t1">—</b></div><div class="tile"><small>REMAINING</small><b id="t2">—</b></div>
       <div class="tile"><small>TOTAL</small><b id="t3">—</b></div><div class="tile"><small>EXPIRES</small><b id="t4">—</b><em id="t4d"></em></div>
+    <div class="tile wide"><small>DEVICES ONLINE</small><b id="dv">—</b><div class="dots" id="dd"></div></div>
     </div>
   </div>
   <div class="card ct" id="ctc"><div class="ctr" id="ctr"></div></div>
@@ -24,10 +25,12 @@
     <div class="apps" id="apps"></div>
   </div>
   <div class="card" id="cc"><h3><span>Configs</span></h3><div id="cfs"></div></div>
+  <div class="card" id="spc"><h3><span>Speed test</span><span id="sst"></span></h3><div class="sp4"><div><small>PING</small><b id="s_p">—</b></div><div><small>JITTER</small><b id="s_j">—</b></div><div><small>DOWNLOAD</small><b id="s_d">—</b></div><div><small>UPLOAD</small><b id="s_u">—</b></div></div><button class="btn" id="s_go">شروع تست سرعت</button><p class="hint" style="margin:12px 0 0">سرعت اتصال اینترنت تو تا سرور رو نشون می‌ده</p></div>
   <div class="card"><h3><span>راهنما</span></h3><ol class="st"><li>یکی از اپ‌های بالا رو نصب کن (v2rayNG، Hiddify، Streisand یا Shadowrocket)</li><li>لینک اشتراک رو اضافه کن یا QR رو اسکن کن</li><li>اشتراک رو آپدیت کن و یک کانفیگ رو انتخاب و وصل شو</li></ol></div>
   <div class="ft" id="ft">BATAMN</div>
 </div>
 <div id="toast"></div>
+<script src="/speed.js"></script>
 <script>
 var D=__DATA__,$=function(i){return document.getElementById(i)};
 function toast(t){var e=$('toast');e.textContent=t;e.className='s';setTimeout(function(){e.className=''},1500)}
@@ -46,7 +49,11 @@ if(C.support)cx+='<a class="tg" href="https://t.me/'+C.support+'" target="_blank
 if(C.channel)cx+='<a class="tg" href="https://t.me/'+C.channel+'" target="_blank" rel="noopener">'+TG+'<span><b>کانال اطلاع‌رسانی</b><small>@'+C.channel+'</small></span></a>';
 if(cx)$('ctr').innerHTML=cx;else $('ctc').style.display='none';
 $('ft').innerHTML='BATAMN'+(C.support?'<br><a href="https://t.me/'+C.support+'" target="_blank" rel="noopener">@'+C.support+'</a>':'')+(C.channel?' &nbsp;·&nbsp; <a href="https://t.me/'+C.channel+'" target="_blank" rel="noopener">@'+C.channel+'</a>':'');
-if(D.status!='active'){$('act').style.display='none';$('cc').style.display='none'}
+function dev(n,m){$('dv').textContent=n+(m?' / '+m:'');var d='';if(m){for(var i=0;i<m;i++)d+='<i class="dot'+(i<n?' on':'')+(n>m&&i<m?' over':'')+'"></i>'}$('dd').innerHTML=d;$('dv').className=n?'live':''}
+dev(D.online||0,D.maxDev||0);
+if(D.status=='active'){setInterval(function(){fetch('/sub/'+D.id+'/live',{cache:'no-store'}).then(function(r){return r.json()}).then(function(x){dev(x.online,x.max)}).catch(function(){})},8000)}
+SpeedTest.bind('u='+D.id);
+if(D.status!='active'){$('act').style.display='none';$('cc').style.display='none';$('spc').style.display='none'}
 var U=D.sub,E=encodeURIComponent(U);
 $('cs').onclick=function(){cp(U,'کپی شد')};
 $('apps').innerHTML=[['v2rayNG','v2rayng://install-sub?url='+E+'&name=BATAMN'],['Hiddify','hiddify://import/'+U+'#BATAMN'],['Streisand','streisand://import/'+U],['Shadowrocket','shadowrocket://add/sub://'+btoa(U)+'?remark=BATAMN']].map(function(a){return '<a class="sm" href="'+a[1]+'">'+a[0]+'</a>'}).join('');

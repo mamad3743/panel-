@@ -40,10 +40,17 @@ function bar(id,p){var e=$(id);if(!e)return;e.style.width=Math.min(100,Math.max(
 function put(id,v){var e=$(id);if(e)e.textContent=v}
 function spark(a,c){if(a.length<2)return'';var mx=Math.max.apply(null,a.concat([1])),w=300,h=60,p=a.map(function(v,i){return(i/(a.length-1)*w).toFixed(1)+','+(h-3-v/mx*(h-8)).toFixed(1)}).join(' ');
  return '<svg class="sp-l" viewBox="0 0 300 60" preserveAspectRatio="none"><polyline points="0,60 '+p+' 300,60" fill="'+c+'" fill-opacity=".12" stroke="none"/><polyline points="'+p+'" fill="none" stroke="'+c+'" stroke-width="1.8" vector-effect="non-scaling-stroke"/></svg>'}
+var ONL=null;
+function onlineUI(o){if(!o)return;ONL=o;put('on1',o.users);put('on2',o.devices+' devices');
+ document.querySelectorAll('.onl').forEach(function(e){var n=o.per[e.dataset.u]||0;e.textContent=n;e.parentNode.className='onc'+(n?' live':'')});
+ var l=$('onl');if(l)l.innerHTML=o.list.length?o.list.map(function(x){return '<div class="orow"><b>'+esc(x.name)+'</b><span>'+x.ips.map(esc).join(' · ')+'</span><em>'+x.ips.length+(x.max?' / '+x.max:'')+'</em></div>'}).join(''):'<div class="empty">الان کسی وصل نیست</div>';
+ put('onc',o.track?'':'IP tracking off')}
+function onlineCard(){return '<div class="card" style="margin-top:14px"><h3><span>Online now</span><span id="onc"></span></h3><div id="onl"></div></div>'}
+function speedCard(){return '<div class="card" style="margin-top:14px"><h3><span>Speed test</span><span id="sst"></span></h3><div class="sp4"><div><small>PING</small><b id="s_p">—</b></div><div><small>JITTER</small><b id="s_j">—</b></div><div><small>DOWNLOAD</small><b id="s_d">—</b></div><div><small>UPLOAD</small><b id="s_u">—</b></div></div><button class="btn" id="s_go">شروع تست سرعت</button></div>'}
 function gauge(id,p,t){var e=$('g_'+id);if(!e)return;var c=213.6;e.style.strokeDasharray=(Math.min(100,Math.max(0,p))/100*c).toFixed(1)+' '+c;e.setAttribute('class','pg'+(p>90?' d':p>75?' w':''));put('gv_'+id,t)}
 function sys(){api('GET','/api/sys').then(function(s){SYS=s;H.rx.push(s.net.rxs);H.tx.push(s.net.txs);if(H.rx.length>40){H.rx.shift();H.tx.shift()}
  $('xp').className='pill '+(s.xray.on?'ok':'bad');$('xp').lastChild.textContent=s.xray.on?'XRAY ONLINE':'XRAY OFFLINE';
- if(TAB!='dash')return;
+ onlineUI(s.online);if(TAB!='dash')return;
 gauge('cpu',s.cpu,s.cpu.toFixed(0)+'%');put('cpuT',s.cpu.toFixed(1)+'%  ·  '+s.cores+' vCPU');
  var rp=s.mem.used/s.mem.total*100;gauge('ram',rp,rp.toFixed(0)+'%');put('ramT',B(s.mem.used)+' / '+B(s.mem.total));
  if(s.disk){var dp=s.disk.used/s.disk.total*100;gauge('dsk',dp,dp.toFixed(0)+'%');put('dskT',B(s.disk.used)+' / '+B(s.disk.total))}
@@ -55,12 +62,12 @@ function render(){var v=$('view');v.classList.remove('vw');void v.offsetWidth;v.
 function gg(id,l){return '<div class="gg"><svg viewBox="0 0 80 80"><circle class="tr" cx="40" cy="40" r="34"/><circle class="pg" id="g_'+id+'" cx="40" cy="40" r="34" stroke-dasharray="0 214"/></svg><b id="gv_'+id+'">—</b><small>'+l+'</small></div>'}
 function vDash(v){var act=S.users.filter(function(u){return u.status=='active'}).length,hr=new Date().getHours(),gr=hr<5?'شب بخیر':hr<12?'صبح بخیر':hr<18?'روز بخیر':'عصر بخیر';
  v.innerHTML='<div class="hello"><small>'+gr+'</small><h2>Control Room</h2></div>'+
- '<div class="sg"><div class="sc"><small>USERS</small><b>'+S.users.length+'</b></div><div class="sc"><small>ACTIVE</small><b>'+act+'</b></div>'+
+ '<div class="sg"><div class="sc"><small>USERS</small><b>'+S.users.length+'</b></div><div class="sc"><small>ONLINE</small><b id="on1">'+(ONL?ONL.users:'—')+'</b><span class="sub2" id="on2">'+(ONL?ONL.devices+' devices':'')+'</span></div>'+
  '<div class="sc"><small>TRAFFIC</small><b>'+B(S.totalUsed)+'</b></div><div class="sc"><small>CONNECTIONS</small><b id="cn2">'+(SYS?SYS.conns:'—')+'</b></div></div>'+
  trafficCard()+'<div class="g2"><div class="card"><h3><span>Server</span><span id="rg" style="letter-spacing:1px"></span></h3><div class="gs">'+gg('cpu','CPU')+gg('ram','RAM')+gg('dsk','DISK')+'</div>'+
  '<div class="kv"><div><small>CPU</small><b id="cpuT">—</b></div><div><small>RAM</small><b id="ramT">—</b></div><div><small>DISK</small><b id="dskT">—</b></div><div><small>UPTIME</small><b id="up">—</b></div><div><small>LOAD</small><b id="ld">—</b></div><div><small>XRAY RAM</small><b id="xm">—</b></div></div></div>'+
  '<div class="card"><h3><span>Network</span></h3><div class="kv" style="margin:0 0 8px"><div><small>DOWN ↓</small><b id="rx">—</b></div><div><small>UP ↑</small><b id="tx">—</b></div></div><div id="spk"></div></div></div>';
- v.insertAdjacentHTML('beforeend',topCard());if(SYS){sys()}}
+ v.insertAdjacentHTML('beforeend',onlineCard()+speedCard()+topCard());SpeedTest.bind('');if(ONL)onlineUI(ONL);if(SYS){sys()}}
 function trafficCard(){var d=S.daily,sum=d.total.reduce(function(a,b){return a+b},0);return '<div class="card" style="margin-bottom:14px"><h3><span>Traffic · 14 days</span></h3><div class="big"><b>'+B(sum)+'</b><span>امروز: '+B(d.total[d.total.length-1])+'</span></div>'+bars(d.total,60,'chart')+'<div class="axis"><span>'+d.dates[0].slice(5)+'</span><span>'+d.dates[d.dates.length-1].slice(5)+'</span></div></div>'}
 function topCard(){var l=S.users.slice().sort(function(a,b){return b.used-a.used}).slice(0,5),mx=Math.max.apply(null,l.map(function(u){return u.used}).concat([1]));
  return '<div class="card" style="margin-top:14px"><h3><span>Top users</span></h3>'+(l.length?l.map(function(u){return '<div class="t5"><span class="n">'+esc(u.name)+'</span><div class="bar"><i style="width:'+Math.max(2,u.used/mx*100)+'%"></i></div><span class="s">'+B(u.used)+'</span></div>'}).join(''):'<div class="empty">—</div>')+'</div>'}
@@ -68,7 +75,7 @@ function uCard(u){var pct=u.limit?Math.min(100,u.used/u.limit*100):0,st={active:
  cls=u.status=='active'?'ok':u.status=='off'?'':'bad',rem=u.exp?(u.exp>Date.now()?Math.ceil((u.exp-Date.now())/864e5)+' روز مانده':'منقضی شده'):'نامحدود',td=u.days[u.days.length-1];
  return '<div class="card u'+(u.status=='active'?'':' d')+'"><div class="h"><div class="av2">'+esc(u.name.charAt(0).toUpperCase())+'</div><div class="nm"><b>'+esc(u.name)+'</b><small>'+rem+'</small></div><span class="pill '+cls+'"><i></i>'+st+'</span></div>'+
  '<div class="ub"><i class="'+(pct>90?'d':pct>75?'w':'')+'" style="width:'+(u.limit?Math.max(2,pct):100)+'%;'+(u.limit?'':'opacity:.25')+'"></i></div>'+
- '<div class="um"><span><b>'+B(u.used)+'</b> / '+(u.limit?B(u.limit):'∞')+'</span><span>امروز <b>'+B(td)+'</b></span></div>'+bars(u.days,24,'mini')+(u.note?'<div class="note">'+esc(u.note)+'</div>':'')+
+ '<div class="um"><span><b>'+B(u.used)+'</b> / '+(u.limit?B(u.limit):'∞')+'</span><span>امروز <b>'+B(td)+'</b></span></div>'+bars(u.days,24,'mini')+'<div class="um" style="margin-top:6px"><span>دستگاه آنلاین</span><span class="onc'+(u.online?' live':'')+'"><i></i><b class="onl" data-u="'+u.id+'">'+u.online+'</b> / '+(u.maxDev||'∞')+'</span></div>'+(u.note?'<div class="note">'+esc(u.note)+'</div>':'')+
  '<div class="chips">'+u.links.map(function(l){return '<span class="chip" data-a="cfg" data-i="'+u.id+'" data-k="'+l.k+'">'+esc(l.n)+'</span>'}).join('')+'</div>'+
  '<div class="ac"><button class="sm p" data-a="sub" data-i="'+u.id+'">لینک اشتراک</button><button class="sm" data-a="pg" data-i="'+u.id+'">صفحه</button><button class="sm" data-a="ed" data-i="'+u.id+'">ویرایش</button></div></div>'}
 var FL='all';
@@ -90,14 +97,14 @@ function closeM(){$('md').className='ov hide'}
 $('md').onclick=function(e){if(e.target==$('md'))closeM()};
 function qrModal(u){var s=subUrl(u.id);modal(esc(u.name),'<div style="text-align:center"><img src="/qr?d='+encodeURIComponent(s)+'" width="220" height="220" style="border-radius:14px;background:#fff;padding:6px" alt=""><div class="lk">'+esc(s)+'</div></div><div class="ac"><button class="sm p" id="mc">کپی</button><button class="sm" id="mo">باز کردن صفحه</button></div>');
  $('mc').onclick=function(){cp(s)};$('mo').onclick=function(){window.open(s,'_blank')}}
-function newUser(){modal('کاربر جدید','<span class="lab">نام</span><input id="f1"><div class="row2"><div><span class="lab">حجم (GB) — 0 نامحدود</span><input id="f2" type="number" min="0" step="any" value="0"></div><div><span class="lab">مدت (روز) — 0 نامحدود</span><input id="f3" type="number" min="0" value="30"></div></div><span class="lab">یادداشت</span><input id="f4"><button class="btn" id="ok">ساخت کاربر</button>');
- $('ok').onclick=function(){api('POST','/api/users',{name:$('f1').value,gb:+$('f2').value,days:+$('f3').value,note:$('f4').value}).then(function(){closeM();toast('کاربر ساخته شد');loadState()})}}
+function newUser(){modal('کاربر جدید','<span class="lab">نام</span><input id="f1"><div class="row2"><div><span class="lab">حجم (GB) — 0 نامحدود</span><input id="f2" type="number" min="0" step="any" value="0"></div><div><span class="lab">مدت (روز) — 0 نامحدود</span><input id="f3" type="number" min="0" value="30"></div></div><span class="lab">حداکثر دستگاه/آی‌پی همزمان — 0 نامحدود</span><input id="f6" type="number" min="0" value="0"><span class="lab">یادداشت</span><input id="f4"><button class="btn" id="ok">ساخت کاربر</button>');
+ $('ok').onclick=function(){api('POST','/api/users',{name:$('f1').value,gb:+$('f2').value,days:+$('f3').value,note:$('f4').value,maxDev:+$('f6').value}).then(function(){closeM();toast('کاربر ساخته شد');loadState()})}}
 function editUser(u){var d=u.exp?new Date(u.exp).toISOString().slice(0,10):'';
- modal('ویرایش · '+esc(u.name),'<span class="lab">نام</span><input id="f1" value="'+esc(u.name)+'"><div class="row2"><div><span class="lab">حجم (GB)</span><input id="f2" type="number" min="0" step="any" value="'+(u.limit?+(u.limit/GB).toFixed(2):0)+'"></div><div><span class="lab">انقضا</span><input id="f3" type="date" value="'+d+'"></div></div><span class="lab">یادداشت</span><input id="f4" value="'+esc(u.note||'')+'">'+
+ modal('ویرایش · '+esc(u.name),'<span class="lab">نام</span><input id="f1" value="'+esc(u.name)+'"><div class="row2"><div><span class="lab">حجم (GB)</span><input id="f2" type="number" min="0" step="any" value="'+(u.limit?+(u.limit/GB).toFixed(2):0)+'"></div><div><span class="lab">انقضا</span><input id="f3" type="date" value="'+d+'"></div></div><span class="lab">حداکثر دستگاه/آی‌پی همزمان — 0 نامحدود</span><input id="f6" type="number" min="0" value="'+(u.maxDev||0)+'"><span class="lab">یادداشت</span><input id="f4" value="'+esc(u.note||'')+'">'+
  '<div class="ib" style="border:0;padding:4px 0 14px"><div class="g"><b>فعال</b></div><div class="sw'+(u.on?' on':'')+'" id="f5"></div></div><button class="btn" id="ok">ذخیره</button>'+
  '<div class="ac" style="margin-top:10px"><button class="sm" id="rs">ریست ترافیک</button><button class="sm x" id="dl">حذف کاربر</button></div>');
  $('f5').onclick=function(){this.classList.toggle('on')};
- $('ok').onclick=function(){var v=$('f3').value;api('POST','/api/user/update',{id:u.id,name:$('f1').value,gb:+$('f2').value,exp:v?new Date(v+'T23:59:59').getTime():0,note:$('f4').value,on:$('f5').classList.contains('on')}).then(function(){closeM();toast('ذخیره شد');loadState()})};
+ $('ok').onclick=function(){var v=$('f3').value;api('POST','/api/user/update',{id:u.id,name:$('f1').value,gb:+$('f2').value,exp:v?new Date(v+'T23:59:59').getTime():0,note:$('f4').value,maxDev:+$('f6').value,on:$('f5').classList.contains('on')}).then(function(){closeM();toast('ذخیره شد');loadState()})};
  $('rs').onclick=function(){api('POST','/api/user/update',{id:u.id,reset:1}).then(function(){closeM();toast('ترافیک صفر شد');loadState()})};
  $('dl').onclick=function(){ask('کاربر «'+esc(u.name)+'» حذف بشه؟',function(){api('POST','/api/user/del',{id:u.id}).then(function(){toast('حذف شد');loadState()})})}}
 /* ---------- inbounds ---------- */

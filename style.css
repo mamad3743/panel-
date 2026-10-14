@@ -256,3 +256,25 @@ input,button,select,textarea{font-family:inherit}
 .lgf{margin-top:14px;font-size:10px;letter-spacing:3px;color:var(--mu);opacity:.7}
 .sk{height:96px;border-radius:18px;margin-bottom:14px;background:linear-gradient(100deg,rgba(255,255,255,.04) 30%,rgba(255,255,255,.09) 50%,rgba(255,255,255,.04) 70%);background-size:200% 100%;animation:shim 1.3s infinite}
 @keyframes shim{to{background-position:-200% 0}}
+
+/* ===== v7: online, devices, speed ===== */
+.sp4{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:14px}
+@media(max-width:480px){.sp4{grid-template-columns:repeat(2,1fr)}}
+.sp4 div{background:rgba(255,255,255,.03);border:1px solid var(--line);border-radius:14px;padding:12px 6px;text-align:center}
+.sp4 small{display:block;color:var(--mu);font-size:9px;letter-spacing:2px;margin-bottom:6px}
+.sp4 b{font-family:var(--fm);font-size:15px;font-weight:600;color:#fff;direction:ltr;display:inline-block}
+.sub2{display:block;color:var(--mu);font-size:10.5px;margin-top:4px;font-family:var(--fm)}
+.onc{display:inline-flex;align-items:center;gap:6px;font-family:var(--fm);direction:ltr}
+.onc i{width:7px;height:7px;border-radius:50%;background:var(--mu);opacity:.5}
+.onc.live i{background:var(--ok);opacity:1;box-shadow:0 0 8px var(--ok);animation:pulse 1.6s infinite}
+@keyframes pulse{50%{opacity:.35}}
+.orow{display:flex;align-items:center;gap:10px;padding:10px 0;border-top:1px solid var(--line)}
+.orow:first-child{border-top:0}.orow b{width:84px;font-size:13px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.orow span{flex:1;color:var(--mu);font-family:var(--fm);font-size:11px;direction:ltr;text-align:left;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.orow em{font-style:normal;font-family:var(--fm);font-size:12px;color:var(--ok)}
+.tile.wide{grid-column:1/-1}
+.tile b.live{color:var(--ok)}
+.dots{display:flex;justify-content:center;gap:7px;margin-top:8px;min-height:10px}
+.dot{width:10px;height:10px;border-radius:50%;border:1.5px solid rgba(var(--rgb),.4)}
+.dot.on{background:var(--ok);border-color:var(--ok);box-shadow:0 0 8px var(--ok)}
+.dot.over{background:var(--bad);border-color:var(--bad);box-shadow:0 0 8px var(--bad)}
