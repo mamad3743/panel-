@@ -51,7 +51,10 @@ gauge('cpu',s.cpu,s.cpu.toFixed(0)+'%');put('cpuT',s.cpu.toFixed(1)+'%  ·  '+s.
  if(s.disk){var dp=s.disk.used/s.disk.total*100;gauge('dsk',dp,dp.toFixed(0)+'%');put('dskT',B(s.disk.used)+' / '+B(s.disk.total))}
  put('ld',s.load.map(function(x){return x.toFixed(2)}).join(' '));
  put('rx',B(s.net.rxs)+'/s');put('tx',B(s.net.txs)+'/s');put('up',Dur(s.pup));put('cn',s.conns);put('xm',B(s.xray.mem));put('rg',s.region);put('cn2',s.conns);
- if($('spk'))$('spk').innerHTML=spark(H.rx,'#5b9bff')+spark(H.tx,'#4fd1a0')})}
+  if($('spk'))$('spk').innerHTML=spark(H.rx,'#5b9bff')+spark(H.tx,'#4fd1a0');
+  var xe=$('xerr'),xb=$('xrs');
+  if(s.xray&&s.xray.err){if(xe){xe.style.display='block';xe.textContent='⚠️ '+s.xray.err}if(xb)xb.style.display='block'}
+  else{if(xe)xe.style.display='none';if(xb)xb.style.display='none'}})}
 /* ---------- views ---------- */
 function render(){var v=$('view');v.classList.remove('vw');void v.offsetWidth;v.classList.add('vw');({dash:vDash,users:vUsers,inb:vInb,scan:vScan,loc:vLoc,set:vSet})[TAB](v)}
 function gg(id,l){return '<div class="gg"><svg viewBox="0 0 80 80"><circle class="tr" cx="40" cy="40" r="34"/><circle class="pg" id="g_'+id+'" cx="40" cy="40" r="34" stroke-dasharray="0 214"/></svg><b id="gv_'+id+'">—</b><small>'+l+'</small></div>'}
@@ -60,9 +63,10 @@ function vDash(v){var act=S.users.filter(function(u){return u.status=='active'})
  '<div class="sg"><div class="sc"><small>USERS</small><b>'+S.users.length+'</b></div><div class="sc"><small>ONLINE</small><b id="on1">'+(ONL?ONL.users:'—')+'</b><span class="sub2" id="on2">'+(ONL?ONL.devices+' devices':'')+'</span></div>'+
  '<div class="sc"><small>TRAFFIC</small><b>'+B(S.totalUsed)+'</b></div><div class="sc"><small>CONNECTIONS</small><b id="cn2">'+(SYS?SYS.conns:'—')+'</b></div></div>'+
  trafficCard()+'<div class="g2"><div class="card"><h3><span>Server</span><span id="rg" style="letter-spacing:1px"></span></h3><div class="gs">'+gg('cpu','CPU')+gg('ram','RAM')+gg('dsk','DISK')+'</div>'+
- '<div class="kv"><div><small>CPU</small><b id="cpuT">—</b></div><div><small>RAM</small><b id="ramT">—</b></div><div><small>DISK</small><b id="dskT">—</b></div><div><small>UPTIME</small><b id="up">—</b></div><div><small>LOAD</small><b id="ld">—</b></div><div><small>XRAY RAM</small><b id="xm">—</b></div></div></div>'+
+ '<div class="kv"><div><small>CPU</small><b id="cpuT">—</b></div><div><small>RAM</small><b id="ramT">—</b></div><div><small>DISK</small><b id="dskT">—</b></div><div><small>UPTIME</small><b id="up">—</b></div><div><small>LOAD</small><b id="ld">—</b></div><div><small>XRAY RAM</small><b id="xm">—</b></div></div><div class="hint2" id="xerr" style="display:none;margin:10px 0 0"></div><button class="sm" id="xrs" style="display:none;margin-top:8px">ری‌استارت Xray 🔄</button></div></div>'+
  '<div class="card"><h3><span>Network</span></h3><div class="kv" style="margin:0 0 8px"><div><small>DOWN ↓</small><b id="rx">—</b></div><div><small>UP ↑</small><b id="tx">—</b></div></div><div id="spk"></div></div></div>';
-  v.insertAdjacentHTML('beforeend',onlineCard()+expCard()+speedCard()+topCard());SpeedTest.bind('');if(ONL)onlineUI(ONL);if(SYS){sys()}}
+  v.insertAdjacentHTML('beforeend',onlineCard()+expCard()+speedCard()+topCard());SpeedTest.bind('');if(ONL)onlineUI(ONL);if(SYS){sys()}
+  var xr=$('xrs');if(xr)xr.onclick=function(){var b=this;b.innerHTML='<span class="spin"></span>';api('POST','/api/xray/restart').then(function(){toast('دستور ری‌استارت رفت');setTimeout(sys,2500)}).catch(function(){b.textContent='ری‌استارت Xray 🔄'})};}
 function trafficCard(){var d=S.daily,sum=d.total.reduce(function(a,b){return a+b},0);return '<div class="card" style="margin-bottom:14px"><h3><span>Traffic · 14 days</span></h3><div class="big"><b>'+B(sum)+'</b><span>امروز: '+B(d.total[d.total.length-1])+'</span></div>'+bars(d.total,60,'chart')+'<div class="axis"><span>'+d.dates[0].slice(5)+'</span><span>'+d.dates[d.dates.length-1].slice(5)+'</span></div></div>'}
 function expCard(){var l=S.users.filter(function(u){return u.status=='active'&&u.exp&&u.exp-Date.now()<3*864e5}).sort(function(a,b){return a.exp-b.exp}).slice(0,8);
  return '<div class="card" style="margin-top:14px"><h3><span>به‌زودی منقضی ⏰</span><span>'+l.length+'</span></h3>'+(l.length?l.map(function(u){var d=Math.max(0,Math.ceil((u.exp-Date.now())/864e5));return '<div class="t5"><span class="n">'+esc(u.name)+'</span><div class="bar"><i class="'+(d<=1?'d':'w')+'" style="width:'+Math.max(5,100-d/3*100)+'%"></i></div><span class="s">'+d+' روز</span></div>'}).join(''):'<div class="empty">موردی نیست ✓</div>')+'</div>'}

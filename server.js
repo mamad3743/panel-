@@ -80,7 +80,7 @@ function onlineSummary(){let devs=0,us=0;const per={},list=[];
 setInterval(tailAcc,3000);setInterval(enforce,10000);
 
 // ---------- xray ----------
-let xray=null,lastSig='',rt=null;
+let xray=null,lastSig='',rt=null,xrayErr='',xrayLog=[],xrayStarts=[];
 function buildCfg(){
   const act=db.users.filter(isActive),cl=act.length?act:[{id:crypto.randomUUID()}];
   const inb=db.inbounds.filter(i=>i.on).map(i=>{
@@ -97,12 +97,28 @@ function buildCfg(){
     routing:{rules:[...blockRules(),...locRules(),{type:'field',inboundTag:['api'],outboundTag:'api'}]},
     inbounds:inb,outbounds:[{protocol:'freedom',settings:{domainStrategy:'UseIPv4'}},...locOutbounds(),{protocol:'blackhole',tag:'block'}]};
 }
-function startXray(){
-  lastSig=sig();const f=path.join(DIR,'config.json');fs.writeFileSync(f,JSON.stringify(buildCfg()));
-  if(xray){xray.removeAllListeners('exit');xray.kill()}
-  xray=spawn('xray',['run','-c',f],{stdio:'inherit'});
-  xray.on('exit',()=>setTimeout(startXray,2000));
+function startXray(force){
+  const now=Date.now();xrayStarts=xrayStarts.filter(t=>now-t<60000);xrayStarts.push(now);
+  if(xrayStarts.length>8&&!force){xrayErr='کرش پشت سر هم — چند لحظه صبر کن یا ری‌استارت دستی بزن';return}
+  (async()=>{
+    lastSig=sig();let cfg;try{cfg=buildCfg()}catch(e){xrayErr='ساخت کانفیگ ناموفق: '+String(e.message||e).slice(0,200);return}
+    const f=path.join(DIR,'config.json'),nf=path.join(DIR,'config.new.json');
+    try{fs.writeFileSync(nf,JSON.stringify(cfg))}catch(e){xrayErr='نوشتن کانفیگ ناموفق';return}
+    const bad=await new Promise(r=>{execFile('xray',['run','-test','-c',nf],{timeout:20000},(e,o,er)=>{r(e?String(er||e.message||e).split('\n').slice(0,4).join(' ').slice(0,300):null)})});
+    if(bad){xrayErr='کانفیگ رد شد، قبلی نگه داشته شد: '+bad;try{fs.renameSync(nf,f+'.bad')}catch(e){}return}
+    try{fs.renameSync(nf,f)}catch(e){}
+    xrayErr='';
+    if(xray){xray.removeAllListeners('exit');xray.removeAllListeners('error');try{xray.kill()}catch(e){}}
+    try{xray=spawn('xray',['run','-c',f],{stdio:['ignore','pipe','pipe']})}
+    catch(e){xrayErr='اجرای xray ناموفق: '+e.message;return}
+    xray.stdout.on('data',d=>xlog(d));xray.stderr.on('data',d=>xlog(d));
+    xray.on('error',e=>{xrayErr='اجرای xray ناموفق: '+e.message});
+    xray.on('exit',(c,s)=>{xlog('exit code='+c+' sig='+s);setTimeout(()=>startXray(),3000)});
+  })();
 }
+function xlog(s){try{const ls=String(s).split('\n').map(t=>t.trim()).filter(Boolean).slice(-6);
+  for(const t of ls){xrayLog.push(t.slice(0,300));if(/error|failed|panic|fatal|cannot|invalid/i.test(t))xrayErr=t.slice(0,200)}
+  if(xrayLog.length>80)xrayLog.splice(0,xrayLog.length-80)}catch(e){}}
 function restartSoon(){clearTimeout(rt);rt=setTimeout(async()=>{await poll();startXray()},400)}
 function poll(){return new Promise(r=>{
   execFile('xray',['api','statsquery','-s','127.0.0.1:10085','-pattern','user>>>','-reset'],{timeout:5000},(e,out)=>{
@@ -351,9 +367,10 @@ http.createServer(async(req,res)=>{
   if(u.startsWith('/api/')){
     if(!authed(req))return J(res,{e:1},401);
     if(u==='/api/me')return J(res,{ok:1});
+    if(u==='/api/xray/restart'){startXray(true);return J(res,{ok:1})}
     if(u==='/api/sys')return J(res,{cpu:cpuPct,cores:+cpuCores.toFixed(1),mem:memInfo(),disk:diskInfo(),net:{rx:NS.rx,tx:NS.tx,rxs:NS.rxs,txs:NS.txs},
       pup:process.uptime(),load:os.loadavg(),conns,online:onlineSummary(),region:process.env.RAILWAY_REPLICA_REGION||process.env.RAILWAY_REGION||'—',
-      xray:{on:!!(xray&&xray.exitCode===null),mem:xrayMem()}});
+      xray:{on:!!(xray&&xray.exitCode===null),mem:xrayMem(),err:xrayErr}});
     if(u==='/api/state'){
       const D=dates14(),hh=effHost(req,h);return J(res,{host:hh,realHost:h,settings:{addr:db.settings.addr,host:db.settings.host||'',fallback:db.settings.fallback||'',theme:db.settings.theme||'knight',plans:Array.isArray(db.settings.plans)?db.settings.plans:[],payCard:db.settings.payCard||'',payUrl:db.settings.payUrl||'',botUser:db.settings.botUser||'',hasBotToken:!!db.settings.botToken,scanAuto:!!db.settings.scanAuto,scanEveryH:Math.max(1,Math.min(72,+db.settings.scanEveryH||12)),sources:srcList(),...contact(),...repoCfg(),auto:!!db.settings.auto,hasToken:!!db.settings.token},version:curVersion(),inbounds:db.inbounds,daily:{dates:D,total:D.map(d=>(db.daily||{})[d]||0)},
         users:db.users.map(x=>pubUser(x,hh,addr,true)),totalUsed:db.users.reduce((a,x)=>a+x.used,0)});
