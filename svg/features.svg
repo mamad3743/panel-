@@ -15,10 +15,10 @@
     </g>
     <g>
       <rect x="308" y="20" width="262" height="200" rx="20" fill="url(#cb)" stroke="#5b9bff" stroke-opacity=".3"/>
-      <text x="333" y="75" font-size="40">🌍</text>
-      <text x="333" y="115" font-size="21" font-weight="700" fill="#eaf1ff">Multi-location</text>
-      <text x="333" y="145" font-size="15" fill="#8fa3c4">SOCKS5 / HTTP egress,</text>
-      <text x="333" y="168" font-size="15" fill="#8fa3c4">auto country flags</text>
+      <text x="333" y="75" font-size="40">🛡</text>
+      <text x="333" y="115" font-size="21" font-weight="700" fill="#eaf1ff">Security</text>
+      <text x="333" y="145" font-size="15" fill="#8fa3c4">Login log, IP kick,</text>
+      <text x="333" y="168" font-size="15" fill="#8fa3c4">safe-restart</text>
     </g>
     <g>
       <rect x="586" y="20" width="262" height="200" rx="20" fill="url(#cb)" stroke="#5b9bff" stroke-opacity=".3"/>

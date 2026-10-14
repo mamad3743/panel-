@@ -31,10 +31,10 @@
 .nx-chips{display:flex;gap:6px;justify-content:center;flex-wrap:wrap;margin-top:10px}
 .nx-mchip{font-family:var(--fm);font-size:10.5px;direction:ltr;color:var(--mu);border:1px solid var(--line);background:rgba(255,255,255,.03);padding:5px 10px;border-radius:99px;cursor:pointer;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .nx-mchip:active{border-color:var(--ac);color:var(--tx)}
-.nx-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:9px;margin-top:15px;text-align:right}
-.nx-t{background:rgba(255,255,255,.035);border:1px solid var(--line);border-radius:14px;padding:11px 12px}
-.nx-t small{display:block;color:var(--mu);font-size:9.5px;letter-spacing:2px;margin-bottom:5px;font-weight:600}
-.nx-t b{font-size:15px;font-weight:600;color:#fff;font-family:var(--fm);direction:ltr;display:inline-block}
+.nx-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:9px;margin-top:15px;text-align:right}
+.nx-t{background:rgba(255,255,255,.035);border:1px solid var(--line);border-radius:14px;padding:11px 12px;min-width:0;overflow:hidden}
+.nx-t small{display:block;color:var(--mu);font-size:9.5px;letter-spacing:2px;margin-bottom:5px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.nx-t b{font-size:14px;font-weight:600;color:#fff;font-family:var(--fm);direction:ltr;display:block;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .nx-t em{display:block;font-style:normal;color:var(--mu);font-size:10.5px;margin-top:2px;min-height:15px}
 .nx-t.hl{border-color:rgba(var(--rgb),.4);background:rgba(var(--rgb),.08)}
 .nx-t.hl b{color:var(--ac3)}
