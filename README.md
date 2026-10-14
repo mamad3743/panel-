@@ -11,9 +11,12 @@
     <img alt="Xray" src="https://img.shields.io/badge/Xray--core-latest-111111?style=for-the-badge&logo=xray&logoColor=white" />
     <img alt="Railway" src="https://img.shields.io/badge/Railway-Ready-111111?style=for-the-badge&logo=railway&logoColor=white" />
     <img alt="Lang" src="https://img.shields.io/badge/FA--EN-bilingual-8b5cf6?style=for-the-badge" />
+    <img alt="Theme" src="https://img.shields.io/badge/Theme-Gotham-8b5cf6?style=for-the-badge" />
     <img alt="Port" src="https://img.shields.io/badge/PORT-8080-8b5cf6?style=for-the-badge" />
   </p>
 </div>
+
+> ⚡ **60-second start:** deploy on Railway → open your domain → log in → **کاربران → ＋ جدید** → copy the subscription link. That's it — client apps pick it up instantly.
 
 ---
 
@@ -50,7 +53,7 @@ Everything a small VPN service needs in one lightweight panel: users with traffi
 | 📱 Sub page | FA/EN, usage ring + forecast, 14-day chart, speed test, per-config ping, QR, PWA |
 | 🤖 Telegram | `/start + id` status lookup, renew deep-links, support/channel buttons |
 | 📦 Plans & backup | One-click plans, full JSON backup/restore |
-| 🎨 Themes | Knight, Gotham, Joker, Light + redesigned login |
+| 🎨 Gotham UI | One polished dark theme + redesigned login |
 | 🩺 Reliability | Xray config test before restart, crash-loop guard, error display + manual restart |
 
 ---
@@ -82,6 +85,13 @@ npm i vazirmatn @fontsource-variable/inter @fontsource-variable/jetbrains-mono
 ADMIN_PASS=change-me BATAMN_DATA=./data node boot.js
 ```
 
+Or with Docker:
+
+```bash
+docker build -t batamn .
+docker run -d -p 8080:8080 -v batamn-data:/data -e ADMIN_PASS=change-me --name batamn batamn
+```
+
 The panel listens on `PORT` (default `8080`). Behind Railway/Cloudflare, public TLS on `443` is terminated by the platform and WebSocket traffic is bridged to Xray internally — no extra ports needed.
 
 ---
@@ -105,7 +115,7 @@ The panel listens on `PORT` (default `8080`). Behind Railway/Cloudflare, public 
 - **کاربران / Users** — search, status filters, sorting (newest / top usage / name / expiry), bulk select: extend +reset traffic +delete, per-user subscription link + QR + page.
 - **اینباندها / Inbounds** — VLESS/VMess/Trojan over WS/HTTPUpgrade on the same port 443 with separate paths.
 - **اسکنر / Scanner** — tests random CDN IPs from `assets/cf_subnets.txt` for the fastest clean IPs; one click sets the default address.
-- **تنظیمات / Settings** — main + fallback domains, default address, panel password, contact IDs, plans, payment info, Telegram bot, auto clean-IP rotation, security log (recent logins), backup/restore, themes, GitHub updater.
+- **تنظیمات / Settings** — main + fallback domains, default address, panel password, contact IDs, plans, payment info, Telegram bot, auto clean-IP rotation, security log (recent logins), backup/restore, GitHub updater.
 
 ---
 
@@ -136,7 +146,7 @@ Selected authenticated endpoints (`bt` cookie; all JSON):
 | `POST /api/user/kick` | Block a user IP for 30 min |
 | `POST /api/inbounds` · `/api/inbound/update` · `/api/inbound/del` | Inbound CRUD (name, path, protocol) |
 | `POST /api/scan` | Clean-IP scan |
-| `POST /api/settings` | All settings (domains, plans, payment, bot, sources, theme, …) |
+| `POST /api/settings` | All settings (domains, plans, payment, bot, sources, …) |
 | `GET /api/backup` · `POST /api/restore` | Full DB backup/restore |
 | `GET /api/security` · `GET /api/bot/test` · `POST /api/xray/restart` | Security log, bot check, Xray restart |
 
@@ -152,7 +162,7 @@ Public: `GET /sub/<id>` (HTML page or base64 subscription), `GET /sub/<id>/live`
 ├── app.js           # panel frontend (dashboard/users/inbounds/scanner/settings)
 ├── index.html       # panel shell + redesigned login
 ├── sub.html         # subscription page (FA/EN, charts, speed test)
-├── style.css        # themes (knight/gotham/joker/light) + all UI
+├── style.css        # Gotham UI + all styles
 ├── boot.js          # supervisor: runs image copy or updater-installed copy
 ├── speed.js         # shared speed-test engine
 ├── assets/          # cf_subnets.txt (scanner ranges)
@@ -207,7 +217,7 @@ MIT — do whatever you want, attribution appreciated.
 
 ## ✦ BATAMN چیست؟
 
-**BATAMN** یه پنل مدیریتی سبک برای Xrayـه: ساخت و مدیریت کاربر (حجم، انقضا، محدودیت دستگاه)، لینک و QR اشتراک، اسکنر کلین‌آی‌پی، ربات تلگرام و بکاپ — همه با یه پورت (`8080`) و آماده Railway. رابط فارسی و انگلیسی داره و ۴ تم (Knight، Gotham، Joker، Light) + صفحه لاگین جدید.
+**BATAMN** یه پنل مدیریتی سبک برای Xrayـه: ساخت و مدیریت کاربر (حجم، انقضا، محدودیت دستگاه)، لینک و QR اشتراک، اسکنر کلین‌آی‌پی، ربات تلگرام و بکاپ — همه با یه پورت (`8080`) و آماده Railway. رابط فارسی و انگلیسی داره با تم یکدست **Gotham** + صفحه لاگین جدید.
 
 ## 🚀 نصب روی Railway
 

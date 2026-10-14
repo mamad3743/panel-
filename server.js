@@ -14,11 +14,12 @@ const DEF_IN=[
 let db;
 try{db=JSON.parse(fs.readFileSync(DBF))}catch(e){
   let old=[];try{old=JSON.parse(fs.readFileSync(OLD))}catch(_){}
-  db={secret:crypto.randomBytes(24).toString('hex'),settings:{addr:'',theme:'knight',pass:process.env.ADMIN_PASS||'admin'},
+  db={secret:crypto.randomBytes(24).toString('hex'),settings:{addr:'',theme:'gotham',pass:process.env.ADMIN_PASS||'admin'},
     inbounds:DEF_IN.map((x,i)=>({id:'i'+(i+1),port:10000+i,on:true,...x})),
     users:old.length?old.map(u=>({limit:0,exp:0,used:0,note:'',...u})):[{id:crypto.randomUUID(),name:'default',on:true,created:Date.now(),limit:0,exp:0,used:0,note:''}]};
   save();
 }
+if(db.settings.theme!=='gotham'){db.settings.theme='gotham';try{save()}catch(e){}}
 function save(){fs.writeFileSync(DBF,JSON.stringify(db,null,1))}
 const F=n=>fs.readFileSync(path.join(__dirname,n));
 const STATIC={'/':['index.html','text/html; charset=utf-8'],'/style.css':['style.css','text/css'],'/app.js':['app.js','application/javascript'],'/bg.svg':['bg.svg','image/svg+xml'],'/speed.js':['speed.js','application/javascript']};
@@ -459,7 +460,7 @@ const pubUser=(u,h,addr,withLinks)=>({days:dates14().map(d=>(u.days||{})[d]||0),
 
 http.createServer(async(req,res)=>{
   const U=new URL(req.url,'http://x'),u=U.pathname,h=hostOf(req),addr=cleanAddr(U.searchParams.get('addr'));
-  if(FILES[u]&&req.method==='GET'){const bufr=u==='/'?Buffer.from(FILES[u].toString().replace('__THEME__',db.settings.theme||'knight')):FILES[u];return res.writeHead(200,{'content-type':STATIC[u][1],'cache-control':u==='/bg.svg'?'public,max-age=86400':'no-cache'}),res.end(bufr)}
+  if(FILES[u]&&req.method==='GET'){const bufr=u==='/'?Buffer.from(FILES[u].toString().replace('__THEME__','gotham')):FILES[u];return res.writeHead(200,{'content-type':STATIC[u][1],'cache-control':u==='/bg.svg'?'public,max-age=86400':'no-cache'}),res.end(bufr)}
   if(u.startsWith('/fonts/')){const f=fontFile(u.slice(7));if(!f){res.writeHead(404);return res.end()}res.writeHead(200,{'content-type':'font/woff2','cache-control':'public,max-age=31536000,immutable'});return fs.createReadStream(f).pipe(res)}
   if(u==='/health')return res.end('ok');
   if(u==='/qr'){const s=qrSvg((U.searchParams.get('d')||'').slice(0,1500));return res.writeHead(s?200:404,{'content-type':'image/svg+xml'}),res.end(s)}
@@ -493,7 +494,7 @@ http.createServer(async(req,res)=>{
     const subUrl='https://'+hh+'/sub/'+x.id+(addr?'?addr='+encodeURIComponent(addr):'');
     const fb=cleanHost(db.settings.fallback)||'';
     const data={id:x.id,online:onlineOf(x.id).length,maxDev:x.maxDev||0,contact:contact(),sub:subUrl,host:hh,fallback:fb,altSub:fb?'https://'+fb+'/sub/'+x.id+(addr?'?addr='+encodeURIComponent(addr):''):null,pay:{card:String(db.settings.payCard||'').slice(0,32),url:String(db.settings.payUrl||'').slice(0,200)},bot:cleanTg(db.settings.botUser||''),status:st,used:x.used,limit:x.limit,exp:x.exp,created:x.created,days:dates14().map(d=>((x.days||{})[d]||0)),links:L.map(i=>({n:i.n,loc:i.loc||'',eg:i.eg||'',l:i.l,qr:qrSvg(i.l)}))};
-    const page=SUB.replace('__THEME__',db.settings.theme||'knight').replace(/__NAME__/g,()=>esc(x.name)).replace('__QR__',()=>st==='active'?qrSvg(subUrl):'').replace('__DATA__',()=>JSON.stringify(data).replace(/</g,'\\u003c'));
+    const page=SUB.replace('__THEME__','gotham').replace(/__NAME__/g,()=>esc(x.name)).replace('__QR__',()=>st==='active'?qrSvg(subUrl):'').replace('__DATA__',()=>JSON.stringify(data).replace(/</g,'\\u003c'));
     return res.writeHead(200,{'content-type':'text/html; charset=utf-8','cache-control':'no-store'}),res.end(page);
   }
   if(u==='/api/login'&&req.method==='POST'){
@@ -513,7 +514,7 @@ http.createServer(async(req,res)=>{
       pup:process.uptime(),load:os.loadavg(),conns,online:onlineSummary(),region:process.env.RAILWAY_REPLICA_REGION||process.env.RAILWAY_REGION||'—',
       xray:{on:!!(xray&&xray.exitCode===null),mem:xrayMem(),err:xrayErr}});
     if(u==='/api/state'){
-      const D=dates14(),hh=effHost(req,h);return J(res,{host:hh,realHost:h,settings:{addr:db.settings.addr,host:db.settings.host||'',fallback:db.settings.fallback||'',theme:db.settings.theme||'knight',plans:Array.isArray(db.settings.plans)?db.settings.plans:[],payCard:db.settings.payCard||'',payUrl:db.settings.payUrl||'',botUser:db.settings.botUser||'',hasBotToken:!!db.settings.botToken,scanAuto:!!db.settings.scanAuto,scanEveryH:Math.max(1,Math.min(72,+db.settings.scanEveryH||12)),sources:srcList(),...contact(),...repoCfg(),auto:!!db.settings.auto,hasToken:!!db.settings.token},version:curVersion(),inbounds:db.inbounds,daily:{dates:D,total:D.map(d=>(db.daily||{})[d]||0)},
+      const D=dates14(),hh=effHost(req,h);return J(res,{host:hh,realHost:h,settings:{addr:db.settings.addr,host:db.settings.host||'',fallback:db.settings.fallback||'',theme:'gotham',plans:Array.isArray(db.settings.plans)?db.settings.plans:[],payCard:db.settings.payCard||'',payUrl:db.settings.payUrl||'',botUser:db.settings.botUser||'',hasBotToken:!!db.settings.botToken,scanAuto:!!db.settings.scanAuto,scanEveryH:Math.max(1,Math.min(72,+db.settings.scanEveryH||12)),sources:srcList(),...contact(),...repoCfg(),auto:!!db.settings.auto,hasToken:!!db.settings.token},version:curVersion(),inbounds:db.inbounds,daily:{dates:D,total:D.map(d=>(db.daily||{})[d]||0)},
         users:db.users.map(x=>pubUser(x,hh,addr,true)),totalUsed:db.users.reduce((a,x)=>a+x.used,0)});
     }
     if(u==='/api/backup')return J(res,{ok:1,at:Date.now(),db});
@@ -551,7 +552,7 @@ http.createServer(async(req,res)=>{
       if(b.egress!=null)i.egress=(db.locs||[]).some(l=>l.id===b.egress)?b.egress:'';save();restartSoon();return J(res,{ok:1})}
     if(u==='/api/inbound/del'){if(db.inbounds.length<=1)return J(res,{e:'حداقل یک اینباند لازمه'},400);db.inbounds=db.inbounds.filter(v=>v.id!==b.id);save();restartSoon();return J(res,{ok:1})}
     if(u==='/api/settings'){
-      if(['knight','gotham','joker','light'].includes(b.theme))db.settings.theme=b.theme;
+      db.settings.theme='gotham';
       if(b.repo!=null){const v=String(b.repo).trim().replace(/^https?:\/\/github\.com\//,'').replace(/\.git$/,'').replace(/\/$/,'');if(v&&!/^[\w.-]+\/[\w.-]+$/.test(v))return J(res,{e:'ریپو باید به شکل owner/repo باشه'},400);db.settings.repo=v}
       if(b.branch!=null){const v=String(b.branch).trim();if(v&&!/^[\w./-]{1,60}$/.test(v))return J(res,{e:'برنچ نامعتبره'},400);db.settings.branch=v}
       if(b.token)db.settings.token=String(b.token).trim().slice(0,200);if(b.clearToken)delete db.settings.token;

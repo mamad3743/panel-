@@ -51,9 +51,9 @@
     <g>
       <rect x="586" y="240" width="262" height="200" rx="20" fill="url(#cb)" stroke="#5b9bff" stroke-opacity=".3"/>
       <text x="611" y="295" font-size="40">🎨</text>
-      <text x="611" y="335" font-size="21" font-weight="700" fill="#eaf1ff">4 Themes</text>
-      <text x="611" y="365" font-size="15" fill="#8fa3c4">Knight, Gotham, Joker,</text>
-      <text x="611" y="388" font-size="15" fill="#8fa3c4">Light + new login</text>
+      <text x="611" y="335" font-size="21" font-weight="700" fill="#eaf1ff">Gotham UI</text>
+      <text x="611" y="365" font-size="15" fill="#8fa3c4">One polished dark theme,</text>
+      <text x="611" y="388" font-size="15" fill="#8fa3c4">redesigned login</text>
     </g>
     <g>
       <rect x="864" y="240" width="262" height="200" rx="20" fill="url(#cb)" stroke="#5b9bff" stroke-opacity=".3"/>
