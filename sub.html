@@ -1,0 +1,36 @@
+<!doctype html><html lang="fa" dir="rtl" data-theme="__THEME__"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#04060a"><title>BATAMN · __NAME__</title><link rel="stylesheet" href="/style.css"></head><body><div class="bgimg"></div>
+<svg width="0" height="0" style="position:absolute"><defs><symbol id="bat" viewBox="0 0 200 100"><path d="M100 26L104 12L108 25L116 24C140 14 172 18 196 40C184 40 176 46 172 58C164 50 152 50 146 60C140 54 132 56 128 66C124 60 116 62 112 74L106 66L100 78L94 66L88 74C84 62 76 60 72 66C68 56 60 54 54 60C48 50 36 50 28 58C24 46 16 40 4 40C28 18 60 14 84 24L92 25L96 12L100 26Z"/></symbol></defs></svg>
+<div class="wrap sp">
+  <div class="top" style="justify-content:center"><div class="brand"><svg class="emb" viewBox="0 0 200 100"><use href="#bat"/></svg><b>BATAMN</b></div></div>
+  <div class="card hero">
+    <div class="av"><svg class="emb" viewBox="0 0 200 100"><use href="#bat"/></svg></div>
+    <h2>__NAME__</h2><span class="pill" id="stp"><i></i><span></span></span>
+    <div id="usage" style="margin-top:16px"></div>
+    <div class="qrb" id="qrb">__QR__</div>
+    <div id="act"><p class="hint">QR رو توی کلاینت اسکن کن یا لینک اشتراک رو کپی کن</p>
+    <button class="btn" id="cs">کپی لینک اشتراک</button>
+    <div class="apps" id="apps"></div></div>
+  </div>
+  <div class="card" style="margin-top:14px"><h3>Configs</h3><div id="cfs"></div></div>
+  <div class="card" style="margin-top:14px"><h3>راهنما</h3><ol class="st"><li>یکی از اپ‌های بالا رو نصب کن (v2rayNG، Hiddify، Streisand یا Shadowrocket)</li><li>لینک اشتراک رو اضافه کن یا QR رو اسکن کن</li><li>اشتراک رو آپدیت کن و یک کانفیگ رو انتخاب و وصل شو</li></ol></div>
+  <div class="ft">BATAMN</div>
+</div>
+<div id="toast"></div>
+<script>
+var D=__DATA__,$=function(i){return document.getElementById(i)};
+function toast(t){var e=$('toast');e.textContent=t;e.className='s';setTimeout(function(){e.className=''},1500)}
+function cp(t,m){(navigator.clipboard?navigator.clipboard.writeText(t):Promise.reject()).catch(function(){var a=document.createElement('textarea');a.value=t;document.body.appendChild(a);a.select();document.execCommand('copy');a.remove()});toast(m)}
+function B(n){var u=['B','KB','MB','GB','TB'],i=0;while(n>=1024&&i<4){n/=1024;i++}return n.toFixed(i>1?2:0)+' '+u[i]}
+var ST={active:['فعال','ok'],off:['غیرفعال','bad'],expired:['منقضی شده','bad'],limited:['حجم تمام شده','bad']}[D.status];
+$('stp').className='pill '+ST[1];$('stp').lastChild.textContent=ST[0];
+var pc=D.limit?Math.min(100,D.used/D.limit*100):0,rem=D.exp?(D.exp>Date.now()?Math.ceil((D.exp-Date.now())/864e5)+' روز مانده':'منقضی شده'):'نامحدود';
+$('usage').innerHTML='<div class="ub"><i class="'+(pc>90?'d':pc>75?'w':'')+'" style="width:'+(D.limit?Math.max(2,pc):100)+'%;'+(D.limit?'':'opacity:.25')+'"></i></div><div class="um"><span><b>'+B(D.used)+'</b> / '+(D.limit?B(D.limit):'∞')+'</span><span>'+rem+'</span></div>';
+if(D.status!='active'){$('act').style.display='none';$('qrb').style.display='none'}
+var U=D.sub,E=encodeURIComponent(U);
+if($('cs'))$('cs').onclick=function(){cp(U,'کپی شد')};
+$('apps').innerHTML=[['v2rayNG','v2rayng://install-sub?url='+E+'&name=BATAMN'],['Hiddify','hiddify://import/'+U+'#BATAMN'],['Streisand','streisand://import/'+U],['Shadowrocket','shadowrocket://add/sub://'+btoa(U)+'?remark=BATAMN']].map(function(a){return '<a class="sm" href="'+a[1]+'">'+a[0]+'</a>'}).join('');
+$('cfs').innerHTML=D.links.map(function(l,i){return '<div class="cf"><div><b>'+l.n+'</b></div><div style="display:flex;gap:6px"><button class="sm" data-q="'+i+'">QR</button><button class="sm p" data-c="'+i+'">کپی</button></div></div><div class="qs" id="q'+i+'">'+l.qr+'</div>'}).join('');
+$('cfs').onclick=function(e){var b=e.target.closest('button');if(!b)return;if(b.dataset.c!=null)cp(D.links[b.dataset.c].l,'کانفیگ کپی شد');if(b.dataset.q!=null)$('q'+b.dataset.q).classList.toggle('o')};
+</script></body></html>
