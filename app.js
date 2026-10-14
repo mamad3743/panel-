@@ -49,7 +49,7 @@ function sys(){api('GET','/api/sys').then(function(s){SYS=s;H.rx.push(s.net.rxs)
  put('rx',B(s.net.rxs)+'/s');put('tx',B(s.net.txs)+'/s');put('up',Dur(s.pup));put('cn',s.conns);put('xm',B(s.xray.mem));put('rg',s.region);put('cn2',s.conns);
  if($('spk'))$('spk').innerHTML=spark(H.rx,'#5b9bff')+spark(H.tx,'#4fd1a0')})}
 /* ---------- views ---------- */
-function render(){var v=$('view');({dash:vDash,users:vUsers,inb:vInb,scan:vScan,set:vSet})[TAB](v)}
+function render(){var v=$('view');v.classList.remove('vw');void v.offsetWidth;v.classList.add('vw');({dash:vDash,users:vUsers,inb:vInb,scan:vScan,set:vSet})[TAB](v)}
 function vDash(v){var act=S.users.filter(function(u){return u.status=='active'}).length;
  v.innerHTML='<div class="sg"><div class="sc"><small>USERS</small><b>'+S.users.length+'</b></div><div class="sc"><small>ACTIVE</small><b>'+act+'</b></div>'+
  '<div class="sc"><small>TRAFFIC</small><b>'+B(S.totalUsed)+'</b></div><div class="sc"><small>CONNECTIONS</small><b id="cn2">'+(SYS?SYS.conns:'—')+'</b></div></div>'+

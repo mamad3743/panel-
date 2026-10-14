@@ -24,6 +24,14 @@ const F=n=>fs.readFileSync(path.join(__dirname,n));
 const STATIC={'/':['index.html','text/html; charset=utf-8'],'/style.css':['style.css','text/css'],'/app.js':['app.js','application/javascript'],'/bg.svg':['bg.svg','image/svg+xml']};
 const FILES={};for(const k in STATIC)FILES[k]=F(STATIC[k][0]);
 const SUB=F('sub.html').toString();
+// fonts come from npm packages installed at build time and are served same-origin (works behind filtering)
+const NM=[process.env.NODE_PATH,path.join(__dirname,'node_modules'),'/app/node_modules'].filter(Boolean);
+const FONTSRC={'vazir.woff2':['vazirmatn/fonts/webfonts',/\[wght\].*\.woff2$|variable.*\.woff2$/i,/Regular\.woff2$/i],
+ 'inter.woff2':['@fontsource-variable/inter/files',/^inter-latin-wght-normal\.woff2$/],'mono.woff2':['@fontsource-variable/jetbrains-mono/files',/^jetbrains-mono-latin-wght-normal\.woff2$/]};
+const fontCache={};
+function fontFile(n){if(n in fontCache)return fontCache[n];const d=FONTSRC[n];let out=null;
+  if(d)for(const b of NM){try{const dir=path.join(b,d[0]),l=fs.readdirSync(dir);for(const rx of d.slice(1)){const m=l.find(x=>rx.test(x));if(m){out=path.join(dir,m);break}}}catch(e){}if(out)break}
+  return fontCache[n]=out}
 let CF=[];try{CF=fs.readFileSync(path.join(__dirname,'assets/cf_subnets.txt'),'utf8').split('\n').map(s=>s.trim()).filter(Boolean)}catch(e){}
 
 // ---------- daily stats ----------
@@ -186,6 +194,7 @@ const pubUser=(u,h,addr,withLinks)=>({days:dates14().map(d=>(u.days||{})[d]||0),
 http.createServer(async(req,res)=>{
   const U=new URL(req.url,'http://x'),u=U.pathname,h=hostOf(req),addr=cleanAddr(U.searchParams.get('addr'));
   if(FILES[u]&&req.method==='GET'){const bufr=u==='/'?Buffer.from(FILES[u].toString().replace('__THEME__',db.settings.theme||'knight')):FILES[u];return res.writeHead(200,{'content-type':STATIC[u][1],'cache-control':u==='/bg.svg'?'public,max-age=86400':'no-cache'}),res.end(bufr)}
+  if(u.startsWith('/fonts/')){const f=fontFile(u.slice(7));if(!f){res.writeHead(404);return res.end()}res.writeHead(200,{'content-type':'font/woff2','cache-control':'public,max-age=31536000,immutable'});return fs.createReadStream(f).pipe(res)}
   if(u==='/health')return res.end('ok');
   if(u==='/qr'){const s=qrSvg((U.searchParams.get('d')||'').slice(0,1500));return res.writeHead(s?200:404,{'content-type':'image/svg+xml'}),res.end(s)}
   if(u.startsWith('/sub/')){

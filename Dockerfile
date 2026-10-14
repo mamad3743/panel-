@@ -9,6 +9,7 @@ RUN set -e; \
  unzip -o /tmp/x.zip xray -d /usr/local/bin; chmod +x /usr/local/bin/xray; rm -f /tmp/x.zip; xray version
 WORKDIR /app
 RUN npm init -y >/dev/null && npm i qrcode-generator@1.4.4 --no-audit --no-fund
+RUN npm i vazirmatn @fontsource-variable/inter @fontsource-variable/jetbrains-mono --no-audit --no-fund || echo 'fonts skipped'
 COPY boot.js server.js index.html app.js sub.html style.css bg.svg ./
 COPY assets ./assets
 RUN date +%s > /app/BUILD_TS
