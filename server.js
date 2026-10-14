@@ -404,6 +404,35 @@ async function fetchProxies(urls){const out=new Map();
       out.set(host+':'+port,{host,port,user:m[1]||'',pass:m[2]||''})}}catch(e){}}
   return[...out.values()]}
 
+// ---------- loc health monitor (auto-disable dead proxies) ----------
+let lastLocCheck = 0;
+const locFails = new Map();
+setInterval(async () => {
+  if (db.settings.locHealth === false) return;
+  const everyMin = Math.max(5, Math.min(720, +db.settings.locHealthMin || 30));
+  if (Date.now() - lastLocCheck < everyMin * 60000) return;
+  lastLocCheck = Date.now();
+  const list = (db.locs || []).filter(l => l.on).slice(0, 40);
+  if (!list.length) return;
+  const q = list.slice();
+  await Promise.all(Array.from({ length: 5 }, async () => {
+    while (q.length) {
+      const l = q.shift();
+      try {
+        const r = await detectProto(l.host, l.port, l.user, l.pass, 5000);
+        if (r.proto) { locFails.delete(l.id); l.ms = r.ms; l.why = null; l.proto = r.proto; }
+        else {
+          const n = (locFails.get(l.id) || 0) + 1; locFails.set(l.id, n);
+          l.ms = null; l.why = r.why || 'conn';
+          if (n >= 2) { l.on = false; console.log('[loc-health] auto-disabled', l.host + ':' + l.port, l.why); }
+        }
+      } catch (e) {}
+    }
+  }));
+  try { save() } catch (e) {}
+  if ([...locFails.values()].some(n => n >= 2)) { locFails.clear(); restartSoon(); }
+}, 60000);
+
 // ---------- auth ----------
 const sign=e=>crypto.createHmac('sha256',db.secret).update(String(e)).digest('hex');
 const mkToken=()=>{const e=Date.now()+30*864e5;return e+'.'+sign(e)};
@@ -538,6 +567,8 @@ http.createServer(async(req,res)=>{
       if(b.botToken)db.settings.botToken=String(b.botToken).trim().slice(0,120);if(b.clearBotToken)delete db.settings.botToken;
       if(b.scanAuto!=null)db.settings.scanAuto=!!b.scanAuto;
       if(b.scanEveryH!=null)db.settings.scanEveryH=Math.max(1,Math.min(72,Math.floor(+b.scanEveryH||12)));
+      if(b.locHealth!=null)db.settings.locHealth=!!b.locHealth;
+      if(b.locHealthMin!=null)db.settings.locHealthMin=Math.max(5,Math.min(720,Math.floor(+b.locHealthMin||30)));
       if(b.sources!=null){if(!Array.isArray(b.sources))return J(res,{e:'سورس نامعتبره'},400);
         const vs=b.sources.map(s=>String(s).trim().slice(0,300)).filter(s=>/^https?:\/\/.{6,}$/.test(s)).slice(0,10);db.settings.sources=vs;}
       if(b.pass){if(String(b.pass).length<6)return J(res,{e:'رمز حداقل ۶ کاراکتر'},400);db.settings.pass=String(b.pass);db.secret=crypto.randomBytes(24).toString('hex');
@@ -547,7 +578,8 @@ http.createServer(async(req,res)=>{
     if(u==='/api/update/apply'&&req.method==='POST'){try{const L=await applyUpdate();J(res,{ok:1,latest:L});restartApp();return}catch(e){return J(res,{e:e.message},500)}}
     if(u==='/api/scan'){if(!CF.length)return J(res,{e:'لیست ساب‌نت موجود نیست'},400);
       const sni=/^[\w.-]{3,100}$/.test(b.sni||'')?b.sni:'speed.cloudflare.com';return J(res,await scan(sni,Math.min(200,Math.max(10,+b.count||60))))}
-    if(u==='/api/locs')return J(res,{locs:db.locs||[],sources:srcList(),defaults:DEFAULT_SOURCES});
+    if(u==='/api/locs')return J(res,{locs:db.locs||[],sources:srcList(),defaults:DEFAULT_SOURCES,
+      health:{on:db.settings.locHealth!==false,everyMin:Math.max(5,Math.min(720,+db.settings.locHealthMin||30)),checkedAt:lastLocCheck}});
     if(u==='/api/loc/add'){const host=String(b.host||'').trim().toLowerCase().replace(/^https?:\/\//,'').split(/[/:]/)[0];
       const port=Math.floor(+b.port||0);
       if(!/^[a-z0-9.-]{2,253}$/.test(host)||port<1||port>65535)return J(res,{e:'هاست یا پورت نامعتبره'},400);
