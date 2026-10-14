@@ -43,10 +43,13 @@ function prune(){const cut=dayKey(Date.now()-35*864e5);for(const o of [db.daily|
 const expired=u=>u.exp>0&&Date.now()>u.exp, limited=u=>u.limit>0&&u.used>=u.limit;
 const status=u=>!u.on?'off':expired(u)?'expired':limited(u)?'limited':'active';
 const isActive=u=>status(u)==='active';
-const sig=()=>JSON.stringify([db.users.filter(isActive).map(u=>u.id),db.inbounds.filter(i=>i.on).map(i=>[i.id,i.proto,i.net,i.path,i.port,i.egress||'']),(db.locs||[]).filter(l=>l.on).map(l=>[l.id,l.host,l.port,l.user||'',l.pass||'']),[...blocks.keys()]]);
+const sig=()=>JSON.stringify([db.users.filter(isActive).map(u=>u.id),db.inbounds.filter(i=>i.on).map(i=>[i.id,i.proto,i.net,i.path,i.port,i.egress||'']),(db.locs||[]).filter(l=>l.on).map(l=>[l.id,l.host,l.port,l.user||'',l.pass||'',l.proto||'socks5']),[...blocks.keys()]]);
 const locOn=()=>(db.locs||[]).filter(l=>l.on&&l.host&&+l.port>0&&+l.port<65536);
 const locTag=id=>'loc-'+id;
-function locOutbounds(){return locOn().map(l=>{const s={address:l.host,port:+l.port};if(l.user)s.users=[{user:l.user,pass:l.pass||''}];return{tag:locTag(l.id),protocol:'socks',settings:{servers:[s]}}})}
+const locProto=l=>(l.proto==='http')?'http':'socks5';
+function locOutbounds(){return locOn().map(l=>{const s={address:l.host,port:+l.port};if(l.user)s.users=[{user:l.user,pass:l.pass||''}];
+  if(locProto(l)==='http')return{tag:locTag(l.id),protocol:'http',settings:{servers:[s]}};
+  return{tag:locTag(l.id),protocol:'socks',settings:{servers:[s]}}})}
 function locRules(){const ok=new Set(locOn().map(l=>l.id));return db.inbounds.filter(i=>i.on&&i.egress&&ok.has(i.egress)).map(i=>({type:'field',inboundTag:[i.id],outboundTag:locTag(i.egress)}))}
 
 // ---------- online tracking (xray access log) + device limit ----------
@@ -204,9 +207,11 @@ const cleanLoc=s=>String(s||'').replace(/[\u0000-\u001F\u007F<>\"']/g,'').trim()
 function linksFor(u,h,addr){
   const a=addr||db.settings.addr||h,q='security=tls&sni='+h+'&fp=chrome&alpn=http%2F1.1&host='+h;
   return db.inbounds.filter(i=>i.on).map(i=>{
-    const loc=cleanLoc(i.loc),tag=(loc||i.name.replace(/\s*·\s*/g,'-')).slice(0,30);
-    const nm='BATAMN-'+u.name+'-'+tag,p=encodeURIComponent(i.path);
+    const loc=cleanLoc(i.loc);
     const egL=(db.locs||[]).find(x=>x.id===i.egress&&x.on),eg=egL?(egL.label||(egL.host+':'+egL.port)):'';
+    const egTag=(egL&&/^[A-Z]{2}$/.test(egL.cc||''))?(ccFlag(egL.cc)+' '+(egL.country||'')).trim():'';
+    const tag=(loc||egTag||i.name.replace(/\s*·\s*/g,'-')).slice(0,30);
+    const nm='BATAMN-'+u.name+'-'+tag,p=encodeURIComponent(i.path);
     let l;    if(i.proto==='vmess')l='vmess://'+Buffer.from(JSON.stringify({v:'2',ps:nm,add:a,port:'443',id:u.id,aid:'0',scy:'auto',net:i.net,type:'none',host:h,path:i.path,tls:'tls',sni:h,alpn:'http/1.1',fp:'chrome'})).toString('base64');
     else if(i.proto==='trojan')l='trojan://'+u.id+'@'+a+':443?'+q+'&type='+i.net+'&path='+p+'#'+encodeURIComponent(nm);
     else l='vless://'+u.id+'@'+a+':443?encryption=none&'+q+'&type='+i.net+'&path='+p+'#'+encodeURIComponent(nm);
@@ -304,8 +309,43 @@ function socksConn(host,port,user,pass,th,tp,to=8000){return new Promise(res=>{
   });
 })}
 async function socksTest(host,port,user,pass,to=6000){const c=await socksConn(host,port,user,pass,'1.1.1.1',443,to);if(c.sock){try{c.sock.destroy()}catch(e){}}return{ms:c.ms,why:c.why}}
+function httpTest(host,port,user,pass,to=6000){return new Promise(res=>{
+  const t0=Date.now();let done=false,buf='',s=null;
+  const fin=(ms,why)=>{if(done)return;done=true;clearTimeout(timer);try{s&&s.destroy()}catch(e){}res({ms,why})};
+  const timer=setTimeout(()=>fin(null,'timeout'),to);
+  try{s=net.connect({host,port:+port,timeout:to})}catch(e){fin(null,'conn');return}
+  s.on('timeout',()=>fin(null,'timeout'));
+  s.on('error',e=>fin(null,e&&e.code==='ENOTFOUND'?'dns':(e&&e.code==='ECONNREFUSED'?'refused':'conn')));
+  s.on('connect',()=>{
+    let h='CONNECT 1.1.1.1:443 HTTP/1.1\r\nHost: 1.1.1.1:443\r\n';
+    if(user)h+='Proxy-Authorization: Basic '+Buffer.from(user+':'+(pass||'')).toString('base64')+'\r\n';
+    try{s.write(h+'\r\n')}catch(e){fin(null,'conn')}});
+  s.on('data',d=>{buf+=String(d);if(buf.indexOf('\r\n\r\n')<0&&buf.length<8000)return;
+    const m=/^HTTP\/1\.[01]\s+(\d{3})/.exec(buf);
+    if(m&&+m[1]===200)fin(Date.now()-t0,null);else fin(null,m?'denied':'proto')})})}
+async function detectProto(host,port,user,pass,to=7000){
+  const out=await Promise.all([socksTest(host,port,user,pass,to),httpTest(host,port,user,pass,to)]);
+  const ok=[out[0].ms!=null?{proto:'socks5',ms:out[0].ms}:null,out[1].ms!=null?{proto:'http',ms:out[1].ms}:null].filter(Boolean).sort((a,b)=>a.ms-b.ms);
+  if(ok.length)return{proto:ok[0].proto,ms:ok[0].ms};
+  return{proto:'',ms:null,why:out[0].why||out[1].why||'conn'}}
+async function geoIP(ip){
+  ip=String(ip||'').trim();if(!ip)return null;
+  const eps=[
+    ['https://ipwho.is/'+ip,j=>(j&&j.success!==false&&j.country_code)?{cc:j.country_code,country:j.country||''}:null],
+    ['https://ipinfo.io/'+ip+'/json',j=>j&&j.country?{cc:j.country,country:''}:null],
+    ['http://ip-api.com/json/'+ip+'?fields=status,country,countryCode',j=>(j&&j.status==='success')?{cc:j.countryCode,country:j.country||''}:null]];
+  for(const ep of eps){
+    try{
+      const r=await fetch(ep[0],{headers:{'User-Agent':'BATAMN'},signal:AbortSignal.timeout(8000)});
+      if(!r.ok)continue;
+      const g=ep[1](await r.json());
+      if(g&&/^[A-Za-z]{2}$/.test(g.cc||''))return{cc:g.cc.toUpperCase(),country:cleanLoc(g.country)};
+    }catch(e){}
+  }
+  return null}
 const ccFlag=cc=>{cc=String(cc||'').toUpperCase();if(!/^[A-Z]{2}$/.test(cc))return'🌐';try{return String.fromCodePoint(cc.charCodeAt(0)+127397,cc.charCodeAt(1)+127397)}catch(e){return'🌐'}};
-async function socksEgress(host,port,user,pass){
+async function socksEgress(host,port,user,pass,proto){
+  if(proto==='http')return httpTunnelEgress(host,port,user,pass);
   const c=await socksConn(host,port,user,pass,'ip-api.com',80,10000);
   if(!c.sock)return{why:c.why};
   const sock=c.sock;
@@ -316,11 +356,45 @@ async function socksEgress(host,port,user,pass){
       sock.on('data',d=>{raw+=String(d);if(raw.length>8000){clearTimeout(tm);res()}});
       sock.on('close',()=>{clearTimeout(tm);res()});sock.on('error',()=>{clearTimeout(tm);res()})});
     const j=JSON.parse(raw.slice(raw.indexOf('\r\n\r\n')+4));
-    if(j&&j.status==='ok'&&j.query)return{ip:j.query,country:j.country||'',cc:j.countryCode||''};
+    if(j&&j.status==='ok'&&j.query)return{ip:j.query,country:cleanLoc(j.country||''),cc:String(j.countryCode||'').toUpperCase()};
     return{why:'geo'};
   }catch(e){return{why:'conn'}}
   finally{try{sock.destroy()}catch(e){}}
 }
+function httpTunnelEgress(host,port,user,pass){
+  return new Promise(res=>{
+    let done=false,raw='',stage=0,s=null;
+    const fin=o=>{if(done)return;done=true;clearTimeout(tm);try{s&&s.destroy()}catch(e){}res(o)};
+    const tm=setTimeout(()=>fin({why:'timeout'}),14000);
+    try{s=net.connect({host,port:+port,timeout:10000})}catch(e){fin({why:'conn'});return}
+    s.on('timeout',()=>fin({why:'timeout'}));
+    s.on('error',e=>fin({why:e&&e.code==='ENOTFOUND'?'dns':(e&&e.code==='ECONNREFUSED'?'refused':'conn')}));
+    s.on('connect',()=>{
+      let h='CONNECT ip-api.com:80 HTTP/1.1\r\nHost: ip-api.com:80\r\n';
+      if(user)h+='Proxy-Authorization: Basic '+Buffer.from(user+':'+(pass||'')).toString('base64')+'\r\n';
+      try{s.write(h+'\r\n')}catch(e){fin({why:'conn'})}});
+    s.on('data',d=>{raw+=String(d);
+      if(stage===0){
+        const i=raw.indexOf('\r\n\r\n');if(i<0){if(raw.length>4000)fin({why:'denied'});return}
+        const m=/^HTTP\/1\.[01]\s+(\d{3})/.exec(raw);
+        if(!m||+m[1]!==200){fin({why:m?'denied':'proto'});return}
+        stage=1;raw=raw.slice(i+4);
+        try{s.write('GET /json/?fields=status,query,country,countryCode HTTP/1.0\r\nHost: ip-api.com\r\nConnection: close\r\n\r\n')}catch(e){fin({why:'conn'})}
+        return;
+      }
+      if(raw.length>8000)fin({why:'geo'})});
+    s.on('close',()=>{
+      if(stage!==1||done)return;
+      const i=raw.indexOf('\r\n\r\n');let j=null;
+      try{j=JSON.parse(raw.slice(i+4))}catch(e){}
+      if(j&&j.status==='success'&&j.query)fin({ip:j.query,country:cleanLoc(j.country||''),cc:String(j.countryCode||'').toUpperCase()});
+      else fin({why:'geo'})})})}
+async function geoFill(g,host,port,user,pass,proto){
+  if(!g||!g.ip)return g;
+  if(!g.country){
+    try{const gj=await geoIP(g.ip);if(gj){g.country=gj.country;g.cc=gj.cc}}catch(e){}
+  }
+  return g}
 async function fetchProxies(urls){const out=new Map();
   for(const u of urls){try{const r=await fetch(u,{headers:{'User-Agent':'BATAMN'},signal:AbortSignal.timeout(25000)});if(!r.ok)continue;
     const t=await r.text();
@@ -480,34 +554,49 @@ http.createServer(async(req,res)=>{
       db.locs=db.locs||[];
       if(db.locs.some(l=>l.host===host&&+l.port===port))return J(res,{e:'این پروکسی قبلاً اضافه شده'},400);
       if(db.locs.length>=100)return J(res,{e:'حداکثر ۱۰۰ لوکیشن'},400);
-      db.locs.push({id:'L'+Date.now().toString(36),label:cleanLoc(b.label)||('🌐 '+host),host,port,user:String(b.user||'').slice(0,64),pass:String(b.pass||'').slice(0,64),on:true,ms:null,at:Date.now()});
-      save();restartSoon();return J(res,{ok:1})}
+      const user=String(b.user||'').slice(0,64),pass=String(b.pass||'').slice(0,64);
+      let proto=(b.proto==='http'||b.proto==='socks5')?b.proto:'',ms=null,why=null;
+      if(proto){const t=proto==='http'?await httpTest(host,port,user,pass,8000):await socksTest(host,port,user,pass,8000);
+        if(t.ms==null)return J(res,{e:'پروکسی جواب نداد ('+(t.why||'timeout')+')'},400);ms=t.ms}
+      else{const d=await detectProto(host,port,user,pass);if(!d.proto)return J(res,{e:'هیچ پروتکلی جواب نداد (socks5/http)'},400);proto=d.proto;ms=d.ms}
+      db.locs.push({id:'L'+Date.now().toString(36),label:cleanLoc(b.label)||('🌐 '+host),host,port,user,pass,proto,on:true,ms,why,at:Date.now()});
+      save();restartSoon();return J(res,{ok:1,proto,ms})}
     if(u==='/api/loc/update'){const l=(db.locs||[]).find(v=>v.id===b.id);if(!l)return J(res,{e:1},404);
       if(b.on!=null)l.on=!!b.on;if(b.label!=null)l.label=cleanLoc(b.label)||l.label;save();restartSoon();return J(res,{ok:1})}
     if(u==='/api/loc/del'){db.locs=(db.locs||[]).filter(v=>v.id!==b.id);
       db.inbounds.forEach(i=>{if(i.egress===b.id)delete i.egress});save();restartSoon();return J(res,{ok:1})}
     if(u==='/api/loc/test'){const l=(db.locs||[]).find(v=>v.id===b.id);if(!l)return J(res,{e:1},404);
-      const r=await socksTest(l.host,l.port,l.user,l.pass,8000);l.ms=r.ms;l.why=r.why||null;l.at=Date.now();
-      if(r.ms!=null){const g=await socksEgress(l.host,l.port,l.user,l.pass).catch(()=>({}));
-        if(g&&g.ip){l.egress=g.ip;l.country=g.country||'';l.cc=g.cc||'';
-          if(/^🌐 [\d.]/.test(l.label||''))l.label=ccFlag(g.cc)+' '+(g.country||l.host)}}
-      save();return J(res,{ok:1,ms:l.ms,why:l.why,egress:l.egress||null,country:l.country||null,cc:l.cc||null})}
+      const d=await detectProto(l.host,l.port,l.user,l.pass,8000);
+      l.at=Date.now();
+      if(!d.proto){l.ms=null;l.why=d.why;save();return J(res,{ok:1,ms:null,why:d.why})}
+      l.proto=d.proto;l.ms=d.ms;l.why=null;
+      const g=await geoFill(await socksEgress(l.host,l.port,l.user,l.pass,l.proto).catch(()=>({})),l.host,l.port,l.user,l.pass,l.proto);
+      if(g&&g.ip){l.egress=g.ip;l.country=g.country||'';l.cc=g.cc||'';
+        if(/^🌐 [\d.]/.test(l.label||''))l.label=ccFlag(g.cc)+' '+(g.country||l.host)}
+      save();return J(res,{ok:1,ms:l.ms,proto:l.proto,why:null,egress:l.egress||null,country:l.country||null,cc:l.cc||null})}
     if(u==='/api/loc/fetch'){const urls=(Array.isArray(b.urls)&&b.urls.length?b.urls:srcList()).slice(0,10);
       const max=Math.min(30,Math.max(1,Math.floor(+b.max||10)));
       const all=await fetchProxies(urls);
       const have=new Set((db.locs||[]).map(l=>l.host+':'+l.port));
       const fresh=all.filter(p=>!have.has(p.host+':'+p.port)).slice(0,150);
       const good=[];const q=fresh.slice();const fails={};
-      await Promise.all(Array.from({length:15},async()=>{while(q.length&&good.length<max){const p=q.shift();const r=await socksTest(p.host,p.port,p.user,p.pass,5000);if(r.ms!=null)good.push({...p,ms:r.ms});else fails[r.why||'conn']=(fails[r.why||'conn']||0)+1}}));
+      await Promise.all(Array.from({length:15},async()=>{while(q.length&&good.length<max){const p=q.shift();const r=await detectProto(p.host,p.port,p.user,p.pass,6000);if(r.proto)good.push({...p,proto:r.proto,ms:r.ms});else fails[r.why||'conn']=(fails[r.why||'conn']||0)+1}}));
       good.sort((x,y)=>x.ms-y.ms);
       db.locs=db.locs||[];
       const added=[];
-      for(const g of good){if(db.locs.length>=100)break;const nl={id:'L'+Date.now().toString(36)+Math.floor(Math.random()*99),label:'🌐 '+g.host,on:true,host:g.host,port:g.port,user:g.user,pass:g.pass,ms:g.ms,at:Date.now()};db.locs.push(nl);added.push(nl)}
+      for(const g of good){if(db.locs.length>=100)break;const nl={id:'L'+Date.now().toString(36)+Math.floor(Math.random()*99),label:'🌐 '+g.host,on:true,host:g.host,port:g.port,user:g.user,pass:g.pass,proto:g.proto,ms:g.ms,at:Date.now()};db.locs.push(nl);added.push(nl)}
       const aq=added.slice();
       await Promise.all(Array.from({length:5},async()=>{while(aq.length){const l=aq.shift();
-        try{const g=await socksEgress(l.host,l.port,l.user,l.pass);
-          if(g.ip){l.egress=g.ip;l.country=g.country||'';l.cc=g.cc||'';l.label=ccFlag(g.cc)+' '+(g.country||l.host)}}catch(e){}}}));
-      save();restartSoon();return J(res,{ok:1,tested:all.length,checked:fresh.length,added:added.length,fails,list:added.slice(0,20).map(l=>({host:l.host,port:l.port,ms:l.ms,country:l.country||'',cc:l.cc||'',egress:l.egress||''}))})}
+        try{const g=await geoFill(await socksEgress(l.host,l.port,l.user,l.pass,l.proto),l.host,l.port,l.user,l.pass,l.proto);
+          if(g&&g.ip){l.egress=g.ip;l.country=g.country||'';l.cc=g.cc||'';l.label=ccFlag(g.cc)+' '+(g.country||l.host)}}catch(e){}}}));
+      save();restartSoon();return J(res,{ok:1,tested:all.length,checked:fresh.length,added:added.length,fails,list:added.slice(0,20).map(l=>({host:l.host,port:l.port,proto:l.proto,ms:l.ms,country:l.country||'',cc:l.cc||'',egress:l.egress||''}))})}
+    if(u==='/api/loc/inbound'){const l=(db.locs||[]).find(v=>v.id===b.id);if(!l)return J(res,{e:'لوکیشن پیدا نشد'},404);
+      let pth,n=0;do{pth='/'+Math.random().toString(36).slice(2,9);n++}while(db.inbounds.some(i=>i.path===pth)&&n<20);
+      if(db.inbounds.some(i=>i.path===pth))return J(res,{e:'مسیر تکراری شد، دوباره بزن'},400);
+      const port=Math.max(10000,...db.inbounds.map(i=>i.port))+1;
+      const nm=String('Proxy · '+(l.label||l.host)).slice(0,30);
+      db.inbounds.push({id:'i'+Date.now().toString(36),port,on:true,proto:'vless',net:'ws',path:pth,name:nm,loc:cleanLoc(l.label)||cleanLoc(l.host),egress:l.id});
+      save();restartSoon();return J(res,{ok:1,name:nm})}
   }
   res.writeHead(404);res.end('Not found');
 }).on('upgrade',(req,sock,head)=>{
