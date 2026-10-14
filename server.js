@@ -262,7 +262,7 @@ http.createServer(async(req,res)=>{
       return res.end(Buffer.from(L.map(i=>i.l).join('\n')).toString('base64'));
     }
     const subUrl='https://'+hh+'/sub/'+x.id+(addr?'?addr='+encodeURIComponent(addr):'');
-    const data={id:x.id,online:onlineOf(x.id).length,maxDev:x.maxDev||0,contact:contact(),sub:subUrl,host:hh,status:st,used:x.used,limit:x.limit,exp:x.exp,links:L.map(i=>({n:i.n,l:i.l,qr:qrSvg(i.l)}))};
+    const data={id:x.id,online:onlineOf(x.id).length,maxDev:x.maxDev||0,contact:contact(),sub:subUrl,host:hh,status:st,used:x.used,limit:x.limit,exp:x.exp,created:x.created,days:dates14().map(d=>((x.days||{})[d]||0)),links:L.map(i=>({n:i.n,l:i.l,qr:qrSvg(i.l)}))};
     const page=SUB.replace('__THEME__',db.settings.theme||'knight').replace(/__NAME__/g,()=>esc(x.name)).replace('__QR__',()=>st==='active'?qrSvg(subUrl):'').replace('__DATA__',()=>JSON.stringify(data).replace(/</g,'\\u003c'));
     return res.writeHead(200,{'content-type':'text/html; charset=utf-8','cache-control':'no-store'}),res.end(page);
   }

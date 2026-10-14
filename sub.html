@@ -4,128 +4,249 @@
 <link rel="preload" href="/fonts/vazir.woff2" as="font" type="font/woff2" crossorigin><link rel="preload" href="/fonts/inter.woff2" as="font" type="font/woff2" crossorigin>
 <link rel="stylesheet" href="/style.css">
 <style>
-.spx{max-width:540px}
-.spx-top{display:flex;align-items:center;justify-content:space-between;padding:8px 4px 16px}
-.spx-brand{display:flex;align-items:center;gap:10px;color:var(--ac)}
-.spx-brand svg{width:42px;height:21px;filter:drop-shadow(0 0 10px rgba(var(--rgb),.5))}
-.spx-brand b{font-size:17px;letter-spacing:.4em;font-weight:700;background:linear-gradient(180deg,#fff,rgba(var(--rgb),.9));-webkit-background-clip:text;background-clip:text;color:transparent}
-.spx-hero{position:relative;overflow:hidden;text-align:center;padding:26px 20px 20px}
-.spx-hero:before{content:"";position:absolute;left:15%;right:15%;top:0;height:1px;background:linear-gradient(90deg,transparent,var(--ac),transparent)}
-.spx-ring{position:relative;width:168px;height:168px;margin:2px auto 10px}
-.spx-ring svg{width:100%;height:100%;transform:rotate(-90deg);filter:drop-shadow(0 0 12px rgba(var(--rgb),.4))}
-.spx-ring .c{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center}
-.spx-ring b{font-size:32px;font-weight:700;color:#fff;font-family:var(--fm)}
-.spx-ring small{color:var(--mu);font-size:10px;letter-spacing:3px;margin-top:2px}
-.spx-name{margin:0;font-size:22px;font-weight:700}
-.spx-sub{color:var(--mu);font-size:12px;margin-top:4px;font-family:var(--fm);direction:ltr}
-.spx-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:10px;margin-top:16px}
-.spx-t{background:rgba(255,255,255,.035);border:1px solid var(--line);border-radius:14px;padding:11px 8px}
-.spx-t small{display:block;color:var(--mu);font-size:9.5px;letter-spacing:2px;margin-bottom:5px;font-weight:600}
-.spx-t b{font-size:15px;font-weight:600;color:#fff;font-family:var(--fm);direction:ltr;display:inline-block}
-.spx-t em{display:block;font-style:normal;color:var(--mu);font-size:10.5px;margin-top:2px;min-height:14px}
-.spx-t.wide{grid-column:1/-1}
-.spx-dots{display:flex;justify-content:center;gap:7px;margin-top:8px;min-height:10px}
-.spx-bar{height:6px;border-radius:9px;background:rgba(255,255,255,.07);overflow:hidden;margin-top:14px}
-.spx-bar i{display:block;height:100%;border-radius:9px;background:linear-gradient(90deg,var(--ac2),var(--ac3));transition:width 1.2s cubic-bezier(.2,.8,.2,1)}
-.spx-actions{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:14px}
-.spx-qrbox{background:#fff;border-radius:16px;padding:10px;width:200px;height:200px;margin:16px auto 6px;display:none}
-.spx-qrbox.o{display:block}
-.spx-qrbox svg{width:100%;height:100%;display:block}
-.spx-apps{display:grid;grid-template-columns:repeat(2,1fr);gap:8px;margin-top:12px}
-.spx-apps a{display:block;text-align:center;text-decoration:none;padding:10px 8px;border-radius:12px;border:1px solid var(--line);background:rgba(var(--rgb),.07);color:var(--ac3);font-size:13px;font-weight:600;transition:.2s}
-.spx-apps a:active{transform:scale(.97)}
-.spx-cf{display:flex;align-items:center;gap:12px;padding:12px 0;border-top:1px solid var(--line)}
-.spx-cf:first-of-type{border-top:0}
-.spx-cf .g{flex:1;min-width:0}
-.spx-cf b{font-size:13.5px;display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.spx-cf small{color:var(--mu);font-size:10.5px;font-family:var(--fm);direction:ltr;display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.spx-q{display:none;background:#fff;border-radius:14px;padding:8px;width:180px;height:180px;margin:4px auto 12px}
-.spx-q.o{display:block}.spx-q svg{width:100%;height:100%;display:block}
-.spx-dead{text-align:center;padding:26px 10px}
-.spx-dead .ic{font-size:44px;margin-bottom:8px}
-.spx-dead h2{margin:0 0 6px;font-size:19px}
-.spx-dead p{color:var(--mu);font-size:13px;margin:0 0 4px}
-.spx-sup{display:flex;gap:10px}
-@media(max-width:440px){.spx-sup{flex-direction:column}.spx-actions{grid-template-columns:1fr}}
-</style></head><body><div class="bgimg"></div>
+.nx{max-width:560px}
+.nx-top{display:flex;align-items:center;justify-content:space-between;padding:8px 4px 14px}
+.nx-brand{display:flex;align-items:center;gap:10px;color:var(--ac)}
+.nx-brand svg{width:44px;height:22px;filter:drop-shadow(0 0 12px rgba(var(--rgb),.55))}
+.nx-brand b{font-size:17px;letter-spacing:.42em;font-weight:700;background:linear-gradient(180deg,#fff,rgba(var(--rgb),.9));-webkit-background-clip:text;background-clip:text;color:transparent}
+.nx-top-l{display:flex;align-items:center;gap:8px}
+.nx-icobtn{width:34px;height:34px;border-radius:11px;border:1px solid var(--line);background:rgba(255,255,255,.04);color:var(--mu);cursor:pointer;font-size:16px;display:flex;align-items:center;justify-content:center;transition:.2s}
+.nx-icobtn:active{transform:scale(.92) rotate(-30deg)}
+.orb{position:fixed;border-radius:50%;filter:blur(90px);pointer-events:none;z-index:0;opacity:.5}
+.orb.o1{width:340px;height:340px;top:-110px;left:-90px;background:radial-gradient(circle,rgba(var(--rgb),.35),transparent 70%);animation:fl1 9s ease-in-out infinite}
+.orb.o2{width:300px;height:300px;bottom:-100px;right:-80px;background:radial-gradient(circle,rgba(var(--rgb),.22),transparent 70%);animation:fl1 11s ease-in-out infinite reverse}
+@keyframes fl1{50%{transform:translate(24px,30px) scale(1.08)}}
+.nx-hero{position:relative;overflow:hidden;text-align:center;padding:24px 18px 18px}
+.nx-hero:before{content:"";position:absolute;left:12%;right:12%;top:0;height:1px;background:linear-gradient(90deg,transparent,var(--ac),transparent)}
+.nx-live{display:inline-flex;align-items:center;gap:6px;font-size:11px;color:var(--ok);margin-bottom:2px;font-family:var(--fm)}
+.nx-live i{width:7px;height:7px;border-radius:50%;background:var(--ok);box-shadow:0 0 8px var(--ok);animation:pulse 1.6s infinite}
+.nx-ring{position:relative;width:172px;height:172px;margin:6px auto 8px}
+.nx-ring svg{width:100%;height:100%;transform:rotate(-90deg);filter:drop-shadow(0 0 14px rgba(var(--rgb),.45))}
+.nx-ring .c{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center}
+.nx-ring b{font-size:33px;font-weight:700;color:#fff;font-family:var(--fm)}
+.nx-ring small{color:var(--mu);font-size:10px;letter-spacing:3px;margin-top:2px}
+.nx-name{margin:0;font-size:22px;font-weight:700}
+.nx-chips{display:flex;gap:6px;justify-content:center;flex-wrap:wrap;margin-top:10px}
+.nx-mchip{font-family:var(--fm);font-size:10.5px;direction:ltr;color:var(--mu);border:1px solid var(--line);background:rgba(255,255,255,.03);padding:5px 10px;border-radius:99px;cursor:pointer;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.nx-mchip:active{border-color:var(--ac);color:var(--tx)}
+.nx-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:9px;margin-top:15px;text-align:right}
+.nx-t{background:rgba(255,255,255,.035);border:1px solid var(--line);border-radius:14px;padding:11px 12px}
+.nx-t small{display:block;color:var(--mu);font-size:9.5px;letter-spacing:2px;margin-bottom:5px;font-weight:600}
+.nx-t b{font-size:15px;font-weight:600;color:#fff;font-family:var(--fm);direction:ltr;display:inline-block}
+.nx-t em{display:block;font-style:normal;color:var(--mu);font-size:10.5px;margin-top:2px;min-height:15px}
+.nx-t.hl{border-color:rgba(var(--rgb),.4);background:rgba(var(--rgb),.08)}
+.nx-t.hl b{color:var(--ac3)}
+.nx-t.wide{grid-column:1/-1}
+.nx-meter{margin-top:12px;text-align:right}
+.nx-meter .lr{display:flex;justify-content:space-between;font-size:11px;color:var(--mu);margin-bottom:5px}
+.nx-meter .lr b{font-family:var(--fm);color:var(--tx)}
+.nx-bar{height:7px;border-radius:9px;background:rgba(255,255,255,.07);overflow:hidden}
+.nx-bar i{display:block;height:100%;width:0;border-radius:9px;background:linear-gradient(90deg,var(--ac2),var(--ac3));transition:width 1.4s cubic-bezier(.2,.8,.2,1)}
+.nx-dots{display:flex;justify-content:center;gap:7px;margin-top:9px;min-height:10px}
+.nx-chart{display:flex;align-items:flex-end;gap:4px;height:64px;margin-top:12px;direction:ltr}
+.nx-chart i{flex:1;border-radius:4px 4px 2px 2px;background:rgba(var(--rgb),.35);min-height:3px;transition:height 1s cubic-bezier(.2,.8,.2,1);position:relative}
+.nx-chart i.today{background:linear-gradient(180deg,var(--ac3),var(--ac2));box-shadow:0 0 10px rgba(var(--rgb),.5)}
+.nx-chart-lb{display:flex;justify-content:space-between;color:var(--mu);font-size:10px;font-family:var(--fm);direction:ltr;margin-top:5px}
+.nx-actions{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:14px}
+.nx-actions .btn{margin:0}
+.nx-subbox{direction:ltr;text-align:left;font-family:var(--fm);font-size:11px;color:var(--mu);background:rgba(0,0,0,.3);border:1px dashed rgba(var(--rgb),.35);border-radius:12px;padding:11px 12px;margin-top:12px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;cursor:pointer;transition:.2s}
+.nx-subbox:active{border-color:var(--ac);color:var(--tx)}
+.nx-apps{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:12px}
+@media(max-width:460px){.nx-apps{grid-template-columns:repeat(2,1fr)}.nx-actions{grid-template-columns:1fr}}
+.nx-app{display:flex;flex-direction:column;align-items:center;gap:6px;padding:13px 6px;border-radius:14px;border:1px solid var(--line);background:rgba(var(--rgb),.06);color:var(--tx);text-decoration:none;font-size:12.5px;font-weight:700;transition:.18s}
+.nx-app small{font-weight:400;color:var(--mu);font-size:10px;font-family:var(--fm)}
+.nx-app:active{transform:scale(.95);border-color:var(--ac)}
+.nx-cfg-tools{display:flex;gap:8px;margin-bottom:10px}
+.nx-cfg-tools input{margin:0;flex:1;padding:11px 13px;font-size:13px}
+.nx-fch{display:flex;gap:7px;overflow-x:auto;padding:2px 2px 8px;margin-bottom:4px}
+.nx-fc{white-space:nowrap;padding:7px 14px;border-radius:99px;border:1px solid var(--line);background:rgba(255,255,255,.03);color:var(--mu);font-size:12px;cursor:pointer;transition:.2s;font-family:inherit}
+.nx-fc.on{color:#fff;border-color:rgba(var(--rgb),.55);background:rgba(var(--rgb),.16)}
+.nx-cf{display:flex;align-items:center;gap:11px;padding:12px 2px;border-top:1px solid var(--line)}
+.nx-cf .g{flex:1;min-width:0;cursor:pointer}
+.nx-cf b{font-size:13.5px;display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.nx-cf small{color:var(--mu);font-size:10px;font-family:var(--fm);direction:ltr;display:block;margin-top:2px}
+.nx-proto{font-size:9px;font-weight:700;letter-spacing:1px;padding:3px 8px;border-radius:99px;background:rgba(var(--rgb),.12);color:var(--ac3);border:1px solid rgba(var(--rgb),.3);flex:none;font-family:var(--fm)}
+.nx-q{display:none;background:#fff;border-radius:14px;padding:8px;width:180px;height:180px;margin:4px auto 12px}
+.nx-q.o{display:block}.nx-q svg{width:100%;height:100%;display:block}
+.nx-tabs{display:flex;gap:7px;margin-bottom:12px}
+.nx-tab{flex:1;padding:9px 4px;border-radius:11px;border:1px solid var(--line);background:transparent;color:var(--mu);font:inherit;font-size:12px;cursor:pointer;transition:.2s}
+.nx-tab.on{background:rgba(var(--rgb),.15);color:#fff;border-color:rgba(var(--rgb),.5)}
+.nx-dead{text-align:center;padding:28px 10px 20px}
+.nx-dead .ic{font-size:46px;margin-bottom:10px}
+.nx-dead h2{margin:0 0 6px;font-size:20px}
+.nx-dead p{color:var(--mu);font-size:13px;margin:0 0 4px}
+.nx-qrm{position:fixed;inset:0;z-index:60;background:rgba(2,4,8,.8);backdrop-filter:blur(8px);display:flex;align-items:center;justify-content:center;padding:20px;opacity:0;pointer-events:none;transition:.25s}
+.nx-qrm.o{opacity:1;pointer-events:auto}
+.nx-qrm .box{background:var(--card);border:1px solid var(--line);border-radius:22px;padding:22px;width:min(92vw,340px);text-align:center;transform:scale(.92);transition:.25s}
+.nx-qrm.o .box{transform:none}
+.nx-qrm .qrw{background:#fff;border-radius:16px;padding:10px;width:220px;height:220px;margin:12px auto}
+.nx-qrm .qrw svg{width:100%;height:100%;display:block}
+.nx-qrm h3{margin:0;font-size:14px}
+.nx-qrm p{color:var(--mu);font-size:11.5px;font-family:var(--fm);direction:ltr;word-break:break-all;margin:8px 0 0}
+.nx-qrm .row{display:flex;gap:8px;margin-top:14px}
+.nx-row2{display:flex;gap:8px}
+.nx-row2 .btn,.nx-row2 .sm{margin:0}
+.nx-upd{text-align:center;color:var(--mu);font-size:10.5px;margin-top:12px;font-family:var(--fm)}
+</style></head><body><div class="bgimg"></div><div class="orb o1"></div><div class="orb o2"></div>
 <svg width="0" height="0" style="position:absolute"><defs><symbol id="bat" viewBox="0 0 200 100"><path d="M100 26L104 12L108 25L116 24C140 14 172 18 196 40C184 40 176 46 172 58C164 50 152 50 146 60C140 54 132 56 128 66C124 60 116 62 112 74L106 66L100 78L94 66L88 74C84 62 76 60 72 66C68 56 60 54 54 60C48 50 36 50 28 58C24 46 16 40 4 40C28 18 60 14 84 24L92 25L96 12L100 26Z"/></symbol></defs></svg>
-<div class="wrap spx sp">
-  <div class="spx-top"><div class="spx-brand"><svg class="emb" viewBox="0 0 200 100"><use href="#bat"/></svg><b>BATAMN</b></div><span class="pill" id="stp"><i></i><span></span></span></div>
+<div class="wrap nx sp">
+  <div class="nx-top"><div class="nx-brand"><svg class="emb" viewBox="0 0 200 100"><use href="#bat"/></svg><b>BATAMN</b></div>
+    <div class="nx-top-l"><span class="pill" id="stp"><i></i><span></span></span><button class="nx-icobtn" id="rf" title="بروزرسانی">↻</button></div></div>
 
-  <div class="card spx-hero" id="hero">
+  <div class="card nx-hero" id="hero">
     <div id="deadBox"></div>
     <div id="liveBox">
-      <div class="spx-ring"><svg viewBox="0 0 176 176"><defs><linearGradient id="rg" x1="0" y1="0" x2="1" y2="1"><stop offset="0" style="stop-color:var(--ac3)"/><stop offset="1" style="stop-color:var(--ac2)"/></linearGradient></defs>
+      <div class="nx-live"><i></i><span id="liveTx">متصل به سرور</span></div>
+      <div class="nx-ring"><svg viewBox="0 0 176 176"><defs><linearGradient id="rg" x1="0" y1="0" x2="1" y2="1"><stop offset="0" style="stop-color:var(--ac3)"/><stop offset="1" style="stop-color:var(--ac2)"/></linearGradient></defs>
         <circle cx="88" cy="88" r="76" fill="none" stroke="rgba(255,255,255,.07)" stroke-width="9"/><circle id="rp" cx="88" cy="88" r="76" fill="none" stroke="url(#rg)" stroke-width="9" stroke-linecap="round" stroke-dasharray="0 478"/></svg>
         <div class="c"><b id="rn">—</b><small id="rl">USED</small></div></div>
-      <h2 class="spx-name">__NAME__</h2>
-      <div class="spx-sub" id="hostline"></div>
-      <div class="spx-grid">
-        <div class="spx-t"><small>USED</small><b id="t1">—</b></div>
-        <div class="spx-t"><small>REMAINING</small><b id="t2">—</b></div>
-        <div class="spx-t"><small>TOTAL</small><b id="t3">—</b></div>
-        <div class="spx-t"><small>EXPIRES</small><b id="t4">—</b><em id="t4d"></em></div>
-        <div class="spx-t wide"><small>DEVICES ONLINE</small><b id="dv">—</b><div class="spx-dots" id="dd"></div></div>
+      <h2 class="nx-name">__NAME__</h2>
+      <div class="nx-chips"><span class="nx-mchip" id="idchip" title="کپی آیدی"></span><span class="nx-mchip" id="hostline"></span></div>
+      <div class="nx-grid">
+        <div class="nx-t"><small>USED · مصرف</small><b id="t1">—</b></div>
+        <div class="nx-t"><small>REMAINING · باقی‌مانده</small><b id="t2">—</b></div>
+        <div class="nx-t"><small>TOTAL · حجم کل</small><b id="t3">—</b></div>
+        <div class="nx-t"><small>EXPIRES · انقضا</small><b id="t4">—</b><em id="t4d"></em></div>
+        <div class="nx-t hl"><small>AVG / DAY · میانگین روزانه</small><b id="t5">—</b></div>
+        <div class="nx-t hl"><small>FORECAST · پیش‌بینی اتمام</small><b id="t6">—</b></div>
+        <div class="nx-t wide"><small>DEVICES ONLINE · دستگاه‌های آنلاین</small><b id="dv">—</b><div class="nx-dots dots" id="dd"></div></div>
       </div>
-      <div class="spx-bar"><i id="bar"></i></div>
+      <div class="nx-meter"><div class="lr"><span>مصرف حجم</span><b id="pctTx">—</b></div><div class="nx-bar"><i id="bar"></i></div></div>
+      <div class="nx-meter" id="timeMeter"><div class="lr"><span>زمان باقی‌مانده</span><b id="tmTx">—</b></div><div class="nx-bar"><i id="barT"></i></div></div>
+      <div class="nx-meter"><div class="lr"><span>مصرف ۱۴ روز اخیر</span><b id="sumTx">—</b></div><div class="nx-chart" id="chart"></div><div class="nx-chart-lb"><span id="chS">—</span><span>امروز</span></div></div>
     </div>
   </div>
 
-  <div class="card ct" id="ctc" style="margin-top:14px"><h3><span>پشتیبانی</span></h3><div class="ctr spx-sup" id="ctr"></div></div>
-
   <div class="card" id="act" style="margin-top:14px"><h3><span>Subscription · اشتراک</span><span id="copyHint"></span></h3>
-    <div class="spx-qrbox" id="qrb">__QR__</div>
-    <p class="hint">QR رو توی کلاینت اسکن کن یا لینک اشتراک رو کپی کن. اشتراک هر ۱۲ ساعت خودکار آپدیت می‌شه.</p>
-    <div class="spx-actions"><button class="btn" id="cs">کپی لینک اشتراک</button><button class="sm" id="qrbtn">نمایش QR</button></div>
-    <div class="spx-apps" id="apps"></div>
+    <p class="hint">یه ضربه بزن کپی میشه. اشتراک هر ۱۲ ساعت خودکار آپدیت میشه.</p>
+    <div class="nx-subbox" id="subbox">—</div>
+    <div class="nx-actions"><button class="btn" id="cs">کپی لینک اشتراک</button><button class="sm" id="qrbtn">QR اشتراک</button></div>
+    <div class="nx-actions" style="margin-top:8px"><button class="sm" id="shareBtn">اشتراک‌گذاری</button><button class="sm" id="dlBtn">دانلود کانفیگ‌ها</button></div>
+    <div class="nx-apps" id="apps"></div>
   </div>
 
-  <div class="card" id="cc" style="margin-top:14px"><h3><span>Configs · کانفیگ‌ها</span><span id="ccn"></span></h3><div id="cfs"></div></div>
+  <div class="card" id="cc" style="margin-top:14px"><h3><span>Configs · کانفیگ‌ها</span><span id="ccn"></span></h3>
+    <div class="nx-cfg-tools"><input id="cfq" placeholder="جستجو..."><button class="sm p" id="copyAll">کپی همه</button></div>
+    <div class="nx-fch" id="fch"><button class="nx-fc on" data-p="all">همه</button><button class="nx-fc" data-p="vless">VLESS</button><button class="nx-fc" data-p="vmess">VMESS</button><button class="nx-fc" data-p="trojan">TROJAN</button></div>
+    <div id="cfs"></div>
+  </div>
 
-  <div class="card" id="spc" style="margin-top:14px"><h3><span>Speed test · تست سرعت</span><span id="sst"></span></h3><div class="sp4"><div><small>PING</small><b id="s_p">—</b></div><div><small>JITTER</small><b id="s_j">—</b></div><div><small>DOWNLOAD</small><b id="s_d">—</b></div><div><small>UPLOAD</small><b id="s_u">—</b></div></div><button class="btn" id="s_go">شروع تست سرعت</button><p class="hint" style="margin:12px 0 0">سرعت اتصال اینترنت تو تا سرور رو نشون می‌ده</p></div>
+  <div class="card" id="spc" style="margin-top:14px"><h3><span>Speed test · تست سرعت</span><span id="sst"></span></h3><div class="sp4"><div><small>PING</small><b id="s_p">—</b></div><div><small>JITTER</small><b id="s_j">—</b></div><div><small>DOWNLOAD</small><b id="s_d">—</b></div><div><small>UPLOAD</small><b id="s_u">—</b></div></div><button class="btn" id="s_go">شروع تست سرعت</button><div class="nx-row2" style="margin-top:8px"><button class="sm" id="pingBtn">تست سریع پینگ</button><button class="sm" id="connBtn">تست اتصال اشتراک</button></div><p class="hint" style="margin:12px 0 0">تست سرعت، اتصال اینترنت تو تا سرور رو نشون میده</p></div>
 
-  <div class="card" style="margin-top:14px"><h3><span>راهنما</span></h3><ol class="st"><li>یکی از اپ‌های بالا رو نصب کن (v2rayNG، Hiddify، Streisand یا Shadowrocket)</li><li>لینک اشتراک رو اضافه کن یا QR رو اسکن کن</li><li>اشتراک رو آپدیت کن و یک کانفیگ رو انتخاب و وصل شو</li><li>اگه وصل نشد، اول تست سرعت بگیر بعد به پشتیبانی پیام بده</li></ol></div>
+  <div class="card" style="margin-top:14px"><h3><span>راهنمای اتصال</span></h3>
+    <div class="nx-tabs" id="gtabs"><button class="nx-tab on" data-g="and">اندروید</button><button class="nx-tab" data-g="ios">آیفون</button><button class="nx-tab" data-g="win">ویندوز</button></div>
+    <ol class="st" id="guide"></ol>
+  </div>
+
+  <div class="card ct" id="ctc" style="margin-top:14px"><h3><span>پشتیبانی و تمدید</span></h3><div class="ctr" id="ctr" style="display:flex;gap:10px;flex-wrap:wrap"></div>
+    <div class="nx-actions" style="margin-top:10px"><button class="btn" id="renewBtn">درخواست تمدید</button></div></div>
+
   <div class="ft" id="ft">BATAMN</div>
+  <div class="nx-upd" id="upd">—</div>
 </div>
+
+<div class="nx-qrm" id="qrm"><div class="box"><h3 id="qrmTitle">QR</h3><div class="qrw" id="qrmBox"></div><p id="qrmCap"></p><div class="row"><button class="sm p" id="qrmCopy" style="flex:1">کپی</button><button class="sm" id="qrmDl" style="flex:1">دانلود</button><button class="sm" id="qrmX">بستن</button></div></div></div>
+<div id="qrb" style="display:none">__QR__</div>
 <div id="toast"></div>
 <script src="/speed.js"></script>
 <script>
 var D=__DATA__,$=function(i){return document.getElementById(i)};
-function toast(t){var e=$('toast');e.textContent=t;e.className='s';setTimeout(function(){e.className=''},1500)}
-function cp(t,m){(navigator.clipboard?navigator.clipboard.writeText(t):Promise.reject()).catch(function(){var a=document.createElement('textarea');a.value=t;document.body.appendChild(a);a.select();try{document.execCommand('copy')}catch(e){}a.remove()});toast(m)}
-function B(n){var u=['B','KB','MB','GB','TB'],i=0;while(n>=1024&&i<4){n/=1024;i++}return n.toFixed(i>1?2:0)+' '+u[i]}
+function toast(t){var e=$('toast');e.textContent=t;e.className='s';setTimeout(function(){e.className=''},1600)}
+function cp(t,m){try{if(navigator.clipboard&&window.isSecureContext!==false){navigator.clipboard.writeText(t).then(function(){toast(m)},function(){fb()})}else fb()}catch(e){fb()}function fb(){try{var a=document.createElement('textarea');a.value=t;a.style.position='fixed';a.style.opacity='0';document.body.appendChild(a);a.select();document.execCommand('copy');a.remove()}catch(_){}toast(m)}}
+function B(n){var u=['B','KB','MB','GB','TB'],i=0;n=Math.max(0,+n||0);while(n>=1024&&i<4){n/=1024;i++}return n.toFixed(i>1?2:0)+' '+u[i]}
+function faDate(ts){try{return new Intl.DateTimeFormat('fa-IR-u-ca-persian',{year:'numeric',month:'long',day:'numeric'}).format(new Date(ts))}catch(e){return ''}}
 var STMAP={active:['فعال','ok'],off:['غیرفعال','bad'],expired:['منقضی شده','bad'],limited:['حجم تمام شده','bad']};
 var ST=STMAP[D.status]||STMAP.off;
-$('stp').className='pill '+ST[1];$('stp').lastChild.textContent=ST[0];
-var pc=D.limit?Math.min(100,D.used/D.limit*100):0,days=D.exp?Math.max(0,Math.ceil((D.exp-Date.now())/864e5)):null;
+function setPill(s){var m=STMAP[s]||STMAP.off;$('stp').className='pill '+m[1];$('stp').lastChild.textContent=m[0]}
+setPill(D.status);
+var pc=D.limit?Math.min(100,D.used/D.limit*100):0;
+var daysLeft=D.exp?Math.max(0,Math.ceil((D.exp-Date.now())/864e5)):null;
+var elapsed=Math.max(1,Math.round((Date.now()-(D.created||Date.now()))/864e5));
+var avg=D.used/elapsed;
+var rem=D.limit?Math.max(0,D.limit-D.used):null;
 if(D.status==='active'){
-  $('t1').textContent=B(D.used);$('t2').textContent=D.limit?B(Math.max(0,D.limit-D.used)):'∞';$('t3').textContent=D.limit?B(D.limit):'∞';
-  $('t4').textContent=D.exp?days+' روز':'∞';
+  $('t1').textContent=B(D.used);$('t2').textContent=D.limit?B(rem):'∞';$('t3').textContent=D.limit?B(D.limit):'∞';
+  $('t4').textContent=D.exp?daysLeft+' روز':'∞';
+  try{if(D.exp)$('t4d').textContent=faDate(D.exp)}catch(e){}
+  $('t5').textContent=B(avg)+' / روز';
+  var f='—';
+  if(D.limit&&avg>0){var fd=Math.floor(rem/avg);f=fd<=0?'امروز تموم میشه':fd+' روز دیگه'}
+  else if(!D.limit&&D.exp){f=daysLeft+' روز دیگه'}
+  $('t6').textContent=f;
   $('rn').textContent=D.limit?Math.round(pc)+'%':'∞';$('rl').textContent=D.limit?'USED':'UNLIMITED';
-  setTimeout(function(){$('rp').style.strokeDasharray=(D.limit?pc/100*478:478)+' 478';if(!D.limit)$('rp').style.opacity='.35';$('bar').style.width=(D.limit?pc:100)+'%';if(pc>90)$('bar').style.background='linear-gradient(90deg,#b23a4d,var(--bad))';else if(pc>75)$('bar').style.background='linear-gradient(90deg,#b98a2c,var(--warn))'},250);
-  try{if(D.exp)$('t4d').textContent=new Intl.DateTimeFormat('fa-IR-u-ca-persian',{year:'numeric',month:'2-digit',day:'2-digit'}).format(new Date(D.exp))}catch(e){}
+  $('pctTx').textContent=D.limit?Math.round(pc)+'% مصرف شده':'نامحدود';
+  setTimeout(function(){
+    $('rp').style.strokeDasharray=(D.limit?pc/100*478:478)+' 478';if(!D.limit)$('rp').style.opacity='.35';
+    var b=$('bar');b.style.width=(D.limit?pc:100)+'%';
+    var col=D.limit?(pc>90?'linear-gradient(90deg,#b23a4d,var(--bad))':pc>75?'linear-gradient(90deg,#b98a2c,var(--warn))':'linear-gradient(90deg,var(--ac2),var(--ac3))'):'linear-gradient(90deg,var(--ac2),var(--ac3))';
+    b.style.background=col;
+    if(D.exp){var total=Math.max(1,(D.exp-(D.created||D.exp-30*864e5)));var left=Math.max(0,D.exp-Date.now());var tp=100-Math.min(100,left/total*100);$('barT').style.width=tp+'%';$('tmTx').textContent=daysLeft+' روز مونده'}
+    else{$('timeMeter').style.display='none'}
+  },250);
+  var dys=Array.isArray(D.days)&&D.days.length?D.days.slice(-14):[];
+  if(dys.length){var mx=Math.max.apply(null,dys.concat([1]));var sum=dys.reduce(function(a,b){return a+b},0);$('sumTx').textContent=B(sum)+' در ۱۴ روز';
+    $('chart').innerHTML=dys.map(function(v,i){var h=Math.max(4,v/mx*100);return '<i style="height:'+h+'%" class="'+(i===dys.length-1?'today':'')+'" title="'+B(v)+'"></i>'}).join('');
+    try{$('chS').textContent='۱۴ روز پیش'}catch(e){}
+  }else{$('chart').innerHTML='<div class="empty">—</div>'}
 }else{
-  var msgs={off:['💤','غیرفعاله','این اشتراک توسط مدیر غیرفعال شده. به پشتیبانی پیام بده.'],expired:['⌛','تموم شده','مدت اشتراکت تموم شده. برای تمدید به پشتیبانی پیام بده.'],limited:['📦','حجمت تموم شده','حجم اشتراکت تموم شده. برای تمدید به پشتیبانی پیام بده.']};
+  var msgs={off:['💤','غیرفعاله','این اشتراک توسط مدیر غیرفعال شده. به پشتیبانی پیام بده.'],expired:['⌛','تموم شده','مدت اشتراکت تموم شده. برای تمدید دکمه تمدید رو بزن.'],limited:['📦','حجمت تموم شده','حجم اشتراکت تموم شده. برای تمدید دکمه تمدید رو بزن.']};
   var m=msgs[D.status]||msgs.off;
   $('liveBox').style.display='none';
-  $('deadBox').innerHTML='<div class="spx-dead"><div class="ic">'+m[0]+'</div><h2>'+m[1]+'</h2><p>'+m[2]+'</p><p style="font-family:var(--fm);direction:ltr">'+B(D.used)+' / '+(D.limit?B(D.limit):'∞')+'</p></div>';
+  $('deadBox').innerHTML='<div class="nx-dead"><div class="ic">'+m[0]+'</div><h2>'+m[1]+'</h2><p>'+m[2]+'</p><p style="font-family:var(--fm);direction:ltr;margin-top:8px">'+B(D.used)+' / '+(D.limit?B(D.limit):'∞')+'</p></div>';
   $('act').style.display='none';$('cc').style.display='none';$('spc').style.display='none';
 }
-try{$('hostline').textContent=(D.host||location.hostname)+' · '+D.id.slice(0,8)}catch(e){}
+try{$('idchip').textContent='ID '+D.id.slice(0,8);}catch(e){}
+try{$('hostline').textContent=D.host||location.hostname;}catch(e){}
+$('idchip').onclick=function(){cp(D.id,'آیدی کپی شد')};
+$('hostline').onclick=function(){cp(D.host||location.hostname,'هاست کپی شد')};
 var TG='<svg viewBox="0 0 24 24"><path fill="currentColor" d="M21.6 3.4L2.7 10.7c-.9.35-.9 1.6.05 1.9l4.6 1.5 1.8 5.6c.2.7 1.1.9 1.6.4l2.6-2.4 4.7 3.5c.6.4 1.4.1 1.6-.6L23.1 5c.2-.9-.7-1.8-1.5-1.6zM9.4 13.6l8.2-5.1-6.3 6.1-.3 3z"/></svg>',C=D.contact||{},cx='';
-if(C.support)cx+='<a class="tg" href="https://t.me/'+C.support+'" target="_blank" rel="noopener">'+TG+'<span><b>پشتیبانی و تمدید</b><small>@'+C.support+'</small></span></a>';
-if(C.channel)cx+='<a class="tg" href="https://t.me/'+C.channel+'" target="_blank" rel="noopener">'+TG+'<span><b>کانال اطلاع‌رسانی</b><small>@'+C.channel+'</small></span></a>';
+if(C.support)cx+='<a class="tg" style="flex:1;min-width:200px" href="https://t.me/'+C.support+'" target="_blank" rel="noopener">'+TG+'<span><b>پشتیبانی و تمدید</b><small>@'+C.support+'</small></span></a>';
+if(C.channel)cx+='<a class="tg" style="flex:1;min-width:200px" href="https://t.me/'+C.channel+'" target="_blank" rel="noopener">'+TG+'<span><b>کانال اطلاع‌رسانی</b><small>@'+C.channel+'</small></span></a>';
 if(cx)$('ctr').innerHTML=cx;else $('ctc').style.display='none';
+$('renewBtn').onclick=function(){var msg='سلام، تمدید اشتراک '+document.title.replace('BATAMN · ','')+' (ID '+D.id.slice(0,8)+')';if(C.support)window.open('https://t.me/'+C.support+'?text='+encodeURIComponent(msg),'_blank');else toast('پشتیبانی تنظیم نشده')};
 $('ft').innerHTML='BATAMN'+(C.support?'<br><a href="https://t.me/'+C.support+'" target="_blank" rel="noopener">@'+C.support+'</a>':'')+(C.channel?' &nbsp;·&nbsp; <a href="https://t.me/'+C.channel+'" target="_blank" rel="noopener">@'+C.channel+'</a>':'');
-function dev(n,m){$('dv').textContent=n+(m?' / '+m:'');var d='';if(m){for(var i=0;i<m;i++)d+='<i class="dot'+(i<n?' on':'')+(n>m&&i<m?' over':'')+'"></i>'}$('dd').innerHTML=d;$('dv').className=n?'live':''}
+try{$('upd').textContent='آخرین بروزرسانی: '+new Date().toLocaleTimeString('fa-IR')}catch(e){}
+function dev(n,m){$('dv').textContent=n+(m?' / '+m:'');var d='';if(m){for(var i=0;i<m;i++)d+='<i class="dot'+(i<n?' on':'')+(n>m&&i===m-1?' over':'')+'"></i>'}$('dd').innerHTML=d;$('dv').className=n?'live':'';$('liveTx').textContent=n?n+' دستگاه آنلاین':'متصل به سرور · کسی آنلاین نیست'}
 dev(D.online||0,D.maxDev||0);
-if(D.status=='active'){setInterval(function(){fetch('/sub/'+D.id+'/live',{cache:'no-store'}).then(function(r){return r.json()}).then(function(x){dev(x.online,x.max)}).catch(function(){})},8000)}
+var reloaded=false;
+function pollLive(silent){fetch('/sub/'+D.id+'/live',{cache:'no-store'}).then(function(r){return r.json()}).then(function(x){dev(x.online,x.max);if(x.status&&x.status!==D.status&&!reloaded){reloaded=true;toast('وضعیت اشتراک عوض شد');setTimeout(function(){location.reload()},1400)}}).catch(function(){})}
+if(D.status=='active'){setInterval(function(){pollLive()},8000)}
+$('rf').onclick=function(){this.textContent='…';pollLive();var b=this;setTimeout(function(){b.textContent='↻';toast('به‌روز شد');try{$('upd').textContent='آخرین بروزرسانی: '+new Date().toLocaleTimeString('fa-IR')}catch(e){}},900)};
 SpeedTest.bind('u='+D.id);
 var U=D.sub,E=encodeURIComponent(U);
+$('subbox').textContent=U;
+$('subbox').onclick=function(){cp(U,'لینک اشتراک کپی شد')};
 $('cs').onclick=function(){cp(U,'لینک اشتراک کپی شد')};
-var qb=$('qrb');if(qb.innerHTML.trim()){qb.classList.add('o')}$('qrbtn').onclick=function(){qb.classList.toggle('o');this.textContent=qb.classList.contains('o')?'مخفی کردن QR':'نمایش QR'};
-$('apps').innerHTML=[['v2rayNG','v2rayng://install-sub?url='+E+'&name=BATAMN'],['Hiddify','hiddify://import/'+U+'#BATAMN'],['Streisand','streisand://import/'+U],['Shadowrocket','shadowrocket://add/sub://'+btoa(U)+'?remark=BATAMN']].map(function(a){return '<a href="'+a[1]+'">'+a[0]+'</a>'}).join('');
-$('ccn').textContent=D.links.length+' کانفیگ';
-$('cfs').innerHTML=D.links.map(function(l,i){var proto='';try{proto=l.l.split('://')[0].toUpperCase()}catch(e){}return '<div class="spx-cf"><div class="badge">'+l.n.slice(0,2).toUpperCase()+'</div><div class="g"><b>'+l.n+'</b><small>'+proto+' · کلیک کن کپی میشه</small></div><div style="display:flex;gap:6px"><button class="sm" data-q="'+i+'">QR</button><button class="sm p" data-c="'+i+'">کپی</button></div></div><div class="spx-q" id="q'+i+'">'+l.qr+'</div>'}).join('');
-$('cfs').onclick=function(e){var b=e.target.closest('button');if(!b)return;if(b.dataset.c!=null)cp(D.links[b.dataset.c].l,'کانفیگ کپی شد');if(b.dataset.q!=null)$('q'+b.dataset.q).classList.toggle('o')};
+$('shareBtn').onclick=function(){if(navigator.share){navigator.share({title:document.title,text:'اشتراک BATAMN',url:U}).catch(function(){})}else cp(U,'لینک کپی شد، بفرستش')};
+$('dlBtn').onclick=function(){var t=D.links.map(function(l){return l.l}).join('\n');var b=new Blob([t],{type:'text/plain'});var a=document.createElement('a');a.href=URL.createObjectURL(b);a.download='batamn-'+D.id.slice(0,8)+'.txt';document.body.appendChild(a);a.click();setTimeout(function(){URL.revokeObjectURL(a.href);a.remove()},600);toast('فایل دانلود شد')};
+var subQR=$('qrb').innerHTML;
+var qrmCap='';
+function openQRM(title,svg,cap){$('qrmTitle').textContent=title;$('qrmBox').innerHTML=svg||'<div class="empty">QR موجود نیست</div>';$('qrmCap').textContent=cap||'';qrmCap=cap||'';$('qrm').classList.add('o')}
+function closeQRM(){$('qrm').classList.remove('o')}
+$('qrbtn').onclick=function(){openQRM('QR اشتراک',subQR,U)};
+$('qrmX').onclick=closeQRM;$('qrm').onclick=function(e){if(e.target===$('qrm'))closeQRM()};
+$('qrmCopy').onclick=function(){cp(qrmCap||U,'کپی شد')};
+$('qrmDl').onclick=function(){var s=$('qrmBox').innerHTML;if(!s||s.indexOf('<svg')<0){toast('QR موجود نیست');return}var b=new Blob([s],{type:'image/svg+xml'});var a=document.createElement('a');a.href=URL.createObjectURL(b);a.download='batamn-qr-'+D.id.slice(0,8)+'.svg';document.body.appendChild(a);a.click();setTimeout(function(){URL.revokeObjectURL(a.href);a.remove()},600)};
+$('apps').innerHTML=[['v2rayNG','اندروید','v2rayng://install-sub?url='+E+'&name=BATAMN'],['Hiddify','همه پلتفرم','hiddify://import/'+U+'#BATAMN'],['Streisand','iOS','streisand://import/'+U],['Shadowrocket','iOS','shadowrocket://add/sub://'+btoa(U)+'?remark=BATAMN'],['NekoBox','اندروید','nekobox://import/'+U],['v2rayN','ویندوز','v2rayn://import/'+U]].map(function(a){return '<a class="nx-app" href="'+a[2]+'">'+a[0]+'<small>'+a[1]+'</small></a>'}).join('');
+var FL='all';
+function protoOf(l){try{return l.split('://')[0].toLowerCase()}catch(e){return ''}}
+function renderCf(){var q=($('cfq').value||'').toLowerCase();var l=D.links.filter(function(x){var p=protoOf(x.l);var okP=FL==='all'||p===FL;var okQ=!q||x.n.toLowerCase().indexOf(q)>=0;return okP&&okQ});
+  $('ccn').textContent=l.length+' / '+D.links.length;
+  $('cfs').innerHTML=l.length?l.map(function(x){var gi=D.links.indexOf(x);var p=protoOf(x.l).toUpperCase();return '<div class="nx-cf"><div class="badge">'+x.n.slice(0,2).toUpperCase()+'</div><div class="g" data-c="'+gi+'"><b>'+x.n+'</b><small>'+p+' · بزن کپی میشه</small></div><span class="nx-proto">'+p+'</span><div style="display:flex;gap:6px"><button class="sm" data-q="'+gi+'">QR</button><button class="sm p" data-c="'+gi+'">کپی</button></div></div><div class="nx-q" id="q'+gi+'">'+x.qr+'</div>'}).join(''):'<div class="empty">کانفیگی پیدا نشد</div>'}
+renderCf();
+$('cfq').oninput=renderCf;
+$('fch').onclick=function(e){var b=e.target.closest('[data-p]');if(!b)return;FL=b.dataset.p;var all=this.querySelectorAll('.nx-fc');for(var i=0;i<all.length;i++)all[i].classList.remove('on');b.classList.add('on');renderCf()};
+$('cfs').onclick=function(e){var b=e.target.closest('button');var g=e.target.closest('.g');
+  if(b&&b.dataset.c!=null){cp(D.links[+b.dataset.c].l,'کانفیگ کپی شد');return}
+  if(b&&b.dataset.q!=null){var i=+b.dataset.q;var el=$('q'+i);if(el){el.classList.toggle('o');if(el.classList.contains('o'))el.scrollIntoView({block:'nearest',behavior:'smooth'})}return}
+  if(g&&g.dataset.c!=null){cp(D.links[+g.dataset.c].l,'کانفیگ کپی شد')}};
+$('copyAll').onclick=function(){cp(D.links.map(function(l){return l.l}).join('\n'),D.links.length+' کانفیگ کپی شد')};
+$('pingBtn').onclick=function(){var b=this;b.disabled=true;b.textContent='…';var t0=performance.now();fetch('/speed/ping?u='+D.id+'&r='+Math.random(),{cache:'no-store'}).then(function(r){if(!r.ok)throw 0;toast('پینگ: '+Math.round(performance.now()-t0)+'ms')}).catch(function(){toast('خطا در تست')}).then(function(){b.disabled=false;b.textContent='تست سریع پینگ'})};
+$('connBtn').onclick=function(){var b=this;b.disabled=true;b.textContent='…';fetch(D.sub,{headers:{accept:'text/plain'},cache:'no-store'}).then(function(r){if(r.status===200){toast('اشتراک سالمه ✓')}else if(r.status===403){toast('اشتراک غیرفعاله!')}else toast('خطا: '+r.status)}).catch(function(){toast('خطا در اتصال')}).then(function(){b.disabled=false;b.textContent='تست اتصال اشتراک'})};
+var GUIDES={and:['Hiddify یا v2rayNG رو از گوگل‌پلی نصب کن','دکمه «اشتراک‌گذاری» یا «کپی لینک اشتراک» رو بزن','توی اپ، افزودن از کلیپ‌برد / Import from clipboard رو بزن','اشتراک رو آپدیت کن و یه کانفیگ انتخاب کن و وصل شو'],
+ios:['Streisand یا Shadowrocket رو از اپ‌استور نصب کن','روی دکمه Streisand / Shadowrocket بالا بزن تا خودش اضافه بشه','اگه نشد، لینک رو کپی کن و دستی Import کن','یه سرور انتخاب کن و VPN رو روشن کن'],
+win:['v2rayN یا Hiddify رو دانلود و اجرا کن','لینک اشتراک رو کپی کن','توی اپ: Add subscription / افزودن اشتراک','گروه رو آپدیت کن و یه سرور انتخاب کن و Enter بزن']};
+function renderGuide(k){$('guide').innerHTML=GUIDES[k].map(function(t){return '<li>'+t+'</li>'}).join('')}
+renderGuide('and');
+$('gtabs').onclick=function(e){var b=e.target.closest('[data-g]');if(!b)return;var all=this.querySelectorAll('.nx-tab');for(var i=0;i<all.length;i++)all[i].classList.remove('on');b.classList.add('on');renderGuide(b.dataset.g)};
 </script></body></html>
