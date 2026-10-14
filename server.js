@@ -43,7 +43,11 @@ function prune(){const cut=dayKey(Date.now()-35*864e5);for(const o of [db.daily|
 const expired=u=>u.exp>0&&Date.now()>u.exp, limited=u=>u.limit>0&&u.used>=u.limit;
 const status=u=>!u.on?'off':expired(u)?'expired':limited(u)?'limited':'active';
 const isActive=u=>status(u)==='active';
-const sig=()=>JSON.stringify([db.users.filter(isActive).map(u=>u.id),db.inbounds.filter(i=>i.on).map(i=>[i.id,i.proto,i.net,i.path,i.port]),[...blocks.keys()]]);
+const sig=()=>JSON.stringify([db.users.filter(isActive).map(u=>u.id),db.inbounds.filter(i=>i.on).map(i=>[i.id,i.proto,i.net,i.path,i.port,i.egress||'']),(db.locs||[]).filter(l=>l.on).map(l=>[l.id,l.host,l.port,l.user||'',l.pass||'']),[...blocks.keys()]]);
+const locOn=()=>(db.locs||[]).filter(l=>l.on&&l.host&&+l.port>0&&+l.port<65536);
+const locTag=id=>'loc-'+id;
+function locOutbounds(){return locOn().map(l=>{const s={address:l.host,port:+l.port};if(l.user)s.users=[{user:l.user,pass:l.pass||''}];return{tag:locTag(l.id),protocol:'socks',settings:{servers:[s]}}})}
+function locRules(){const ok=new Set(locOn().map(l=>l.id));return db.inbounds.filter(i=>i.on&&i.egress&&ok.has(i.egress)).map(i=>({type:'field',inboundTag:[i.id],outboundTag:locTag(i.egress)}))}
 
 // ---------- online tracking (xray access log) + device limit ----------
 const ACC=path.join(DIR,'access.log'),WIN=120000;
@@ -90,8 +94,8 @@ function buildCfg(){
   return{log:{loglevel:'warning',access:ACC},api:{tag:'api',services:['StatsService']},stats:{},
     dns:{servers:['1.1.1.1','8.8.8.8'],queryStrategy:'UseIPv4'},
     policy:{levels:{0:{handshake:4,connIdle:300,statsUserUplink:true,statsUserDownlink:true}}},
-    routing:{rules:[...blockRules(),{type:'field',inboundTag:['api'],outboundTag:'api'}]},
-    inbounds:inb,outbounds:[{protocol:'freedom',settings:{domainStrategy:'UseIPv4'}},{protocol:'blackhole',tag:'block'}]};
+    routing:{rules:[...blockRules(),...locRules(),{type:'field',inboundTag:['api'],outboundTag:'api'}]},
+    inbounds:inb,outbounds:[{protocol:'freedom',settings:{domainStrategy:'UseIPv4'}},...locOutbounds(),{protocol:'blackhole',tag:'block'}]};
 }
 function startXray(){
   lastSig=sig();const f=path.join(DIR,'config.json');fs.writeFileSync(f,JSON.stringify(buildCfg()));
@@ -180,16 +184,17 @@ setInterval(async()=>{
 
 // ---------- links ----------
 const cleanAddr=a=>a&&/^[\w.\-:\[\]]{1,100}$/.test(a)?a:'';
-const cleanLoc=s=>String(s||'').replace(/[\u0000-\u001F\u007F]/g,'').trim().slice(0,24);
+const cleanLoc=s=>String(s||'').replace(/[\u0000-\u001F\u007F<>\"']/g,'').trim().slice(0,24);
 function linksFor(u,h,addr){
   const a=addr||db.settings.addr||h,q='security=tls&sni='+h+'&fp=chrome&alpn=http%2F1.1&host='+h;
   return db.inbounds.filter(i=>i.on).map(i=>{
     const loc=cleanLoc(i.loc),tag=(loc||i.name.replace(/\s*·\s*/g,'-')).slice(0,30);
-    const nm='BATAMN-'+u.name+'-'+tag,p=encodeURIComponent(i.path);let l;
-    if(i.proto==='vmess')l='vmess://'+Buffer.from(JSON.stringify({v:'2',ps:nm,add:a,port:'443',id:u.id,aid:'0',scy:'auto',net:i.net,type:'none',host:h,path:i.path,tls:'tls',sni:h,alpn:'http/1.1',fp:'chrome'})).toString('base64');
+    const nm='BATAMN-'+u.name+'-'+tag,p=encodeURIComponent(i.path);
+    const egL=(db.locs||[]).find(x=>x.id===i.egress&&x.on),eg=egL?(egL.label||(egL.host+':'+egL.port)):'';
+    let l;    if(i.proto==='vmess')l='vmess://'+Buffer.from(JSON.stringify({v:'2',ps:nm,add:a,port:'443',id:u.id,aid:'0',scy:'auto',net:i.net,type:'none',host:h,path:i.path,tls:'tls',sni:h,alpn:'http/1.1',fp:'chrome'})).toString('base64');
     else if(i.proto==='trojan')l='trojan://'+u.id+'@'+a+':443?'+q+'&type='+i.net+'&path='+p+'#'+encodeURIComponent(nm);
     else l='vless://'+u.id+'@'+a+':443?encryption=none&'+q+'&type='+i.net+'&path='+p+'#'+encodeURIComponent(nm);
-    return{k:i.id,n:i.name,loc:loc,l};});
+    return{k:i.id,n:i.name,loc:loc,eg:eg,l};});
 }
 function qrSvg(t){
   if(!qrlib)return '';
@@ -238,6 +243,33 @@ async function scan(sni,count){
   await Promise.all(Array.from({length:40},async()=>{while(q.length){const ip=q.pop(),ms=await probe(ip,sni);if(ms!=null)out.push({ip,ms})}}));
   return{tested:count,ok:out.length,list:out.sort((a,b)=>a.ms-b.ms).slice(0,24)};
 }
+
+// ---------- socks locations (multi-location egress) ----------
+const DEFAULT_SOURCES=['https://raw.githubusercontent.com/TheSpeedX/PROXY-List/master/socks5.txt','https://raw.githubusercontent.com/monosans/proxy-list/main/proxies/socks5.txt','https://raw.githubusercontent.com/mmpx12/proxy-list/master/socks5.txt'];
+const srcList=()=>Array.isArray(db.settings.sources)&&db.settings.sources.length?db.settings.sources:DEFAULT_SOURCES;
+function socksTest(host,port,user,pass,to=6000){return new Promise(res=>{
+  const t0=Date.now();let done=false,st=0,buf=Buffer.alloc(0),s=null;
+  const fin=ms=>{if(done)return;done=true;try{s&&s.destroy()}catch(e){}res(ms)};
+  const timer=setTimeout(()=>fin(null),to);
+  const finOk=ms=>{clearTimeout(timer);fin(ms)};
+  try{s=net.connect(+port,host,()=>{s.write(Buffer.from([0x05,0x01,user?0x02:0x00]))})}catch(e){fin(null);return}
+  s.on('timeout',()=>finOk(null));s.on('error',()=>finOk(null));
+  const sendReq=()=>{try{s.write(Buffer.from([0x05,0x01,0x00,0x01,1,1,1,1,0x01,0xBB]))}catch(e){finOk(null)}};
+  s.on('data',d=>{buf=Buffer.concat([buf,d]);
+    if(st===0&&buf.length>=2){if(buf[0]!==0x05||buf[1]===0xFF){finOk(null);return}
+      if(buf[1]===0x02){const u=Buffer.from(user||''),p=Buffer.from(pass||'');st=1;buf=Buffer.alloc(0);
+        try{s.write(Buffer.concat([Buffer.from([0x01,u.length]),u,Buffer.from([p.length]),p]))}catch(e){finOk(null)}return}
+      st=2;buf=Buffer.alloc(0);sendReq()}
+    else if(st===1&&buf.length>=2){if(buf[1]!==0x00){finOk(null);return}st=2;buf=Buffer.alloc(0);sendReq()}
+    else if(st===2&&buf.length>=2){finOk(buf[1]===0x00?Date.now()-t0:null)}})})}
+async function fetchProxies(urls){const out=new Map();
+  for(const u of urls){try{const r=await fetch(u,{headers:{'User-Agent':'BATAMN'},signal:AbortSignal.timeout(25000)});if(!r.ok)continue;
+    const t=await r.text();
+    const re=/(?:([A-Za-z0-9._~%!$&'()*+,;=-]{1,64}):([^@\s:]{1,64})@)?(\d{1,3}(?:\.\d{1,3}){3}|[a-zA-Z0-9.-]{2,253}):(\d{2,5})/g;let m;
+    while((m=re.exec(t))&&out.size<3000){const host=m[3],port=+m[4];if(!host||port<1||port>65535)continue;
+      if(/^(10\.|192\.168\.|172\.(1[6-9]|2\d|3[01])\.|127\.)/.test(host))continue;
+      out.set(host+':'+port,{host,port,user:m[1]||'',pass:m[2]||''})}}catch(e){}}
+  return[...out.values()]}
 
 // ---------- auth ----------
 const sign=e=>crypto.createHmac('sha256',db.secret).update(String(e)).digest('hex');
@@ -298,7 +330,7 @@ http.createServer(async(req,res)=>{
     }
     const subUrl='https://'+hh+'/sub/'+x.id+(addr?'?addr='+encodeURIComponent(addr):'');
     const fb=cleanHost(db.settings.fallback)||'';
-    const data={id:x.id,online:onlineOf(x.id).length,maxDev:x.maxDev||0,contact:contact(),sub:subUrl,host:hh,fallback:fb,altSub:fb?'https://'+fb+'/sub/'+x.id+(addr?'?addr='+encodeURIComponent(addr):''):null,pay:{card:String(db.settings.payCard||'').slice(0,32),url:String(db.settings.payUrl||'').slice(0,200)},bot:cleanTg(db.settings.botUser||''),status:st,used:x.used,limit:x.limit,exp:x.exp,created:x.created,days:dates14().map(d=>((x.days||{})[d]||0)),links:L.map(i=>({n:i.n,loc:i.loc||'',l:i.l,qr:qrSvg(i.l)}))};
+    const data={id:x.id,online:onlineOf(x.id).length,maxDev:x.maxDev||0,contact:contact(),sub:subUrl,host:hh,fallback:fb,altSub:fb?'https://'+fb+'/sub/'+x.id+(addr?'?addr='+encodeURIComponent(addr):''):null,pay:{card:String(db.settings.payCard||'').slice(0,32),url:String(db.settings.payUrl||'').slice(0,200)},bot:cleanTg(db.settings.botUser||''),status:st,used:x.used,limit:x.limit,exp:x.exp,created:x.created,days:dates14().map(d=>((x.days||{})[d]||0)),links:L.map(i=>({n:i.n,loc:i.loc||'',eg:i.eg||'',l:i.l,qr:qrSvg(i.l)}))};
     const page=SUB.replace('__THEME__',db.settings.theme||'knight').replace(/__NAME__/g,()=>esc(x.name)).replace('__QR__',()=>st==='active'?qrSvg(subUrl):'').replace('__DATA__',()=>JSON.stringify(data).replace(/</g,'\\u003c'));
     return res.writeHead(200,{'content-type':'text/html; charset=utf-8','cache-control':'no-store'}),res.end(page);
   }
@@ -318,7 +350,7 @@ http.createServer(async(req,res)=>{
       pup:process.uptime(),load:os.loadavg(),conns,online:onlineSummary(),region:process.env.RAILWAY_REPLICA_REGION||process.env.RAILWAY_REGION||'—',
       xray:{on:!!(xray&&xray.exitCode===null),mem:xrayMem()}});
     if(u==='/api/state'){
-      const D=dates14(),hh=effHost(req,h);return J(res,{host:hh,realHost:h,settings:{addr:db.settings.addr,host:db.settings.host||'',fallback:db.settings.fallback||'',theme:db.settings.theme||'knight',plans:Array.isArray(db.settings.plans)?db.settings.plans:[],payCard:db.settings.payCard||'',payUrl:db.settings.payUrl||'',botUser:db.settings.botUser||'',hasBotToken:!!db.settings.botToken,scanAuto:!!db.settings.scanAuto,scanEveryH:Math.max(1,Math.min(72,+db.settings.scanEveryH||12)),...contact(),...repoCfg(),auto:!!db.settings.auto,hasToken:!!db.settings.token},version:curVersion(),inbounds:db.inbounds,daily:{dates:D,total:D.map(d=>(db.daily||{})[d]||0)},
+      const D=dates14(),hh=effHost(req,h);return J(res,{host:hh,realHost:h,settings:{addr:db.settings.addr,host:db.settings.host||'',fallback:db.settings.fallback||'',theme:db.settings.theme||'knight',plans:Array.isArray(db.settings.plans)?db.settings.plans:[],payCard:db.settings.payCard||'',payUrl:db.settings.payUrl||'',botUser:db.settings.botUser||'',hasBotToken:!!db.settings.botToken,scanAuto:!!db.settings.scanAuto,scanEveryH:Math.max(1,Math.min(72,+db.settings.scanEveryH||12)),sources:srcList(),...contact(),...repoCfg(),auto:!!db.settings.auto,hasToken:!!db.settings.token},version:curVersion(),inbounds:db.inbounds,daily:{dates:D,total:D.map(d=>(db.daily||{})[d]||0)},
         users:db.users.map(x=>pubUser(x,hh,addr,true)),totalUsed:db.users.reduce((a,x)=>a+x.used,0)});
     }
     if(u==='/api/backup')return J(res,{ok:1,at:Date.now(),db});
@@ -352,7 +384,8 @@ http.createServer(async(req,res)=>{
       db.inbounds.push({id:'i'+Date.now().toString(36),port,on:true,proto:b.proto,net:b.net,path:pth,name:String(b.name||(b.proto.toUpperCase()+' · '+b.net.toUpperCase())).slice(0,30),loc:cleanLoc(b.loc)});
       save();restartSoon();return J(res,{ok:1})}
     if(u==='/api/inbound/update'){const i=db.inbounds.find(v=>v.id===b.id);if(!i)return J(res,{e:1},404);
-      if(b.on!=null)i.on=!!b.on;if(b.name)i.name=String(b.name).slice(0,30);if(b.loc!=null)i.loc=cleanLoc(b.loc);save();restartSoon();return J(res,{ok:1})}
+      if(b.on!=null)i.on=!!b.on;if(b.name)i.name=String(b.name).slice(0,30);if(b.loc!=null)i.loc=cleanLoc(b.loc);
+      if(b.egress!=null)i.egress=(db.locs||[]).some(l=>l.id===b.egress)?b.egress:'';save();restartSoon();return J(res,{ok:1})}
     if(u==='/api/inbound/del'){if(db.inbounds.length<=1)return J(res,{e:'حداقل یک اینباند لازمه'},400);db.inbounds=db.inbounds.filter(v=>v.id!==b.id);save();restartSoon();return J(res,{ok:1})}
     if(u==='/api/settings'){
       if(['knight','gotham','joker','light'].includes(b.theme))db.settings.theme=b.theme;
@@ -371,6 +404,8 @@ http.createServer(async(req,res)=>{
       if(b.botToken)db.settings.botToken=String(b.botToken).trim().slice(0,120);if(b.clearBotToken)delete db.settings.botToken;
       if(b.scanAuto!=null)db.settings.scanAuto=!!b.scanAuto;
       if(b.scanEveryH!=null)db.settings.scanEveryH=Math.max(1,Math.min(72,Math.floor(+b.scanEveryH||12)));
+      if(b.sources!=null){if(!Array.isArray(b.sources))return J(res,{e:'سورس نامعتبره'},400);
+        const vs=b.sources.map(s=>String(s).trim().slice(0,300)).filter(s=>/^https?:\/\/.{6,}$/.test(s)).slice(0,10);db.settings.sources=vs;}
       if(b.pass){if(String(b.pass).length<6)return J(res,{e:'رمز حداقل ۶ کاراکتر'},400);db.settings.pass=String(b.pass);db.secret=crypto.randomBytes(24).toString('hex');
         res.setHeader('Set-Cookie',sessCookie(req,mkToken()))}
       save();return J(res,{ok:1})}
@@ -378,6 +413,32 @@ http.createServer(async(req,res)=>{
     if(u==='/api/update/apply'&&req.method==='POST'){try{const L=await applyUpdate();J(res,{ok:1,latest:L});restartApp();return}catch(e){return J(res,{e:e.message},500)}}
     if(u==='/api/scan'){if(!CF.length)return J(res,{e:'لیست ساب‌نت موجود نیست'},400);
       const sni=/^[\w.-]{3,100}$/.test(b.sni||'')?b.sni:'speed.cloudflare.com';return J(res,await scan(sni,Math.min(200,Math.max(10,+b.count||60))))}
+    if(u==='/api/locs')return J(res,{locs:db.locs||[],sources:srcList(),defaults:DEFAULT_SOURCES});
+    if(u==='/api/loc/add'){const host=String(b.host||'').trim().toLowerCase().replace(/^https?:\/\//,'').split(/[/:]/)[0];
+      const port=Math.floor(+b.port||0);
+      if(!/^[a-z0-9.-]{2,253}$/.test(host)||port<1||port>65535)return J(res,{e:'هاست یا پورت نامعتبره'},400);
+      db.locs=db.locs||[];
+      if(db.locs.some(l=>l.host===host&&+l.port===port))return J(res,{e:'این پروکسی قبلاً اضافه شده'},400);
+      if(db.locs.length>=100)return J(res,{e:'حداکثر ۱۰۰ لوکیشن'},400);
+      db.locs.push({id:'L'+Date.now().toString(36),label:cleanLoc(b.label)||('🌐 '+host),host,port,user:String(b.user||'').slice(0,64),pass:String(b.pass||'').slice(0,64),on:true,ms:null,at:Date.now()});
+      save();restartSoon();return J(res,{ok:1})}
+    if(u==='/api/loc/update'){const l=(db.locs||[]).find(v=>v.id===b.id);if(!l)return J(res,{e:1},404);
+      if(b.on!=null)l.on=!!b.on;if(b.label!=null)l.label=cleanLoc(b.label)||l.label;save();restartSoon();return J(res,{ok:1})}
+    if(u==='/api/loc/del'){db.locs=(db.locs||[]).filter(v=>v.id!==b.id);
+      db.inbounds.forEach(i=>{if(i.egress===b.id)delete i.egress});save();restartSoon();return J(res,{ok:1})}
+    if(u==='/api/loc/test'){const l=(db.locs||[]).find(v=>v.id===b.id);if(!l)return J(res,{e:1},404);
+      const ms=await socksTest(l.host,l.port,l.user,l.pass);l.ms=ms;l.at=Date.now();save();return J(res,{ok:1,ms})}
+    if(u==='/api/loc/fetch'){const urls=(Array.isArray(b.urls)&&b.urls.length?b.urls:srcList()).slice(0,10);
+      const max=Math.min(30,Math.max(1,Math.floor(+b.max||10)));
+      const all=await fetchProxies(urls);
+      const have=new Set((db.locs||[]).map(l=>l.host+':'+l.port));
+      const fresh=all.filter(p=>!have.has(p.host+':'+p.port)).slice(0,150);
+      const good=[];const q=fresh.slice();
+      await Promise.all(Array.from({length:15},async()=>{while(q.length&&good.length<max){const p=q.shift();const ms=await socksTest(p.host,p.port,p.user,p.pass,5000);if(ms!=null)good.push({...p,ms})}}));
+      good.sort((x,y)=>x.ms-y.ms);
+      db.locs=db.locs||[];
+      for(const g of good){if(db.locs.length>=100)break;db.locs.push({id:'L'+Date.now().toString(36)+Math.floor(Math.random()*99),label:'🌐 '+g.host,on:true,host:g.host,port:g.port,user:g.user,pass:g.pass,ms:g.ms,at:Date.now()})}
+      save();restartSoon();return J(res,{ok:1,tested:all.length,added:good.length,list:good.slice(0,20)})}
   }
   res.writeHead(404);res.end('Not found');
 }).on('upgrade',(req,sock,head)=>{
