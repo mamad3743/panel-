@@ -12,7 +12,7 @@ function api(m,u,b){return fetch(u,{method:m,headers:{'content-type':'applicatio
  if(r.status==401){gate(0);throw 0}return r.json().then(function(d){if(!r.ok&&d.e&&d.e!==1){toast(d.e);throw d}return d})})}
 function cp(t,m){(navigator.clipboard?navigator.clipboard.writeText(t):Promise.reject()).catch(function(){var a=document.createElement('textarea');a.value=t;document.body.appendChild(a);a.select();document.execCommand('copy');a.remove()});toast(m||'کپی شد')}
 var AD=function(){return S.settings&&S.settings.addr?'?addr='+encodeURIComponent(S.settings.addr):''};
-function subUrl(id){return location.origin+'/sub/'+id+AD()}
+function subUrl(id){var h=(S.settings&&S.settings.host)?'https://'+S.settings.host:location.origin;return h+'/sub/'+id+AD()}
 /* ---------- fx & charts ---------- */
 var FX={on:false};
 function city(){var c=$('city');if(c.firstChild)return;var s='',x=0,h,i;while(x<400){var w=9+Math.random()*20;h=22+Math.random()*58;s+='<rect x="'+x+'" y="'+(100-h)+'" width="'+w+'" height="'+h+'"/>';
@@ -30,7 +30,7 @@ function bars(a,h,cls){var mx=Math.max.apply(null,a.concat([1])),n=a.length,w=10
 function gate(p){loginFx(!p);$('login').className=p?'hide':'';$('panel').className=p?'wrap':'hide';$('dock').className=p?'dock':'dock hide';clearInterval(T1);clearInterval(T2);
  if(p){dock();$('view').innerHTML='<div class="sk"></div><div class="sk"></div><div class="sk"></div>';loadState();sys();T1=setInterval(sys,3000);T2=setInterval(function(){if(TAB=='users'||TAB=='dash')loadState(1)},15000)}}
 $('lf').onsubmit=function(e){e.preventDefault();$('err').textContent='';
- fetch('/api/login',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({pass:$('pw').value})}).then(function(r){
+ fetch('/api/login',{method:'POST',headers:{'content-type':'application/json'},credentials:'same-origin',body:JSON.stringify({pass:$('pw').value})}).then(function(r){
   if(r.ok){$('pw').value='';var l=$('login');l.classList.add('go');setTimeout(function(){l.classList.remove('go');gate(1)},750)}else r.json().then(function(d){$('err').textContent=d.e||'رمز اشتباهه'})})};
 function dock(){$('dock').innerHTML=TABS.map(function(t){return '<button data-t="'+t[0]+'" class="'+(t[0]==TAB?'on':'')+'"><svg viewBox="0 0 24 24">'+IC[t[0]]+'</svg>'+t[1]+'</button>'}).join('')}
 $('dock').onclick=function(e){var b=e.target.closest('button');if(!b)return;TAB=b.dataset.t;localStorage.tab=TAB;dock();render();window.scrollTo(0,0)};
@@ -124,7 +124,8 @@ function vScan(v){v.innerHTML='<div class="sec"><h2>اسکنر کلین‌آی�
    el.innerHTML='<h3><span>Results</span><span>'+r.ok+' / '+r.tested+'</span></h3>'+(r.list.length?r.list.map(function(x){return '<div class="res"><code>'+x.ip+'</code><span class="ms '+(x.ms<250?'g':x.ms<600?'y':'r')+'">'+x.ms+' ms</span><span style="display:flex;gap:6px"><button class="sm" data-c="'+x.ip+'">کپی</button><button class="sm p" data-u="'+x.ip+'">استفاده</button></span></div>'}).join(''):'<div class="empty">آی‌پی سالمی پیدا نشد</div>');
    el.onclick=function(e){var c=e.target.closest('[data-c]'),u=e.target.closest('[data-u]');if(c)cp(c.dataset.c);if(u)api('POST','/api/settings',{addr:u.dataset.u}).then(function(){toast('آدرس پیش‌فرض ست شد');loadState(1)})}}).catch(function(){b.textContent='شروع اسکن';b.disabled=false})}}
 /* ---------- settings ---------- */
-function vSet(v){v.innerHTML='<div class="sec"><h2>تنظیمات</h2></div><div class="g2"><div class="card"><h3><span>آدرس پیش‌فرض کانفیگ‌ها</span></h3><p class="hint2">اگه کلین‌آی‌پی بذاری، توی همه لینک‌ها و اشتراک‌ها به‌جای دامنه استفاده می‌شه. خالی = خود دامنه.</p><input id="ad" value="'+esc(S.settings.addr||'')+'" placeholder="مثلاً 104.16.x.x" style="direction:ltr;text-align:left"><button class="btn" id="sa">ذخیره</button></div>'+
+function vSet(v){v.innerHTML='<div class="sec"><h2>تنظیمات</h2></div><div class="card"><h3><span>دامنه اصلی (Domain)</span>'+(S.realHost&&S.settings.host&&S.settings.host!==S.realHost?'<span style="letter-spacing:0">⚠️ الان با '+esc(S.realHost)+' اومدی</span>':'')+'</h3><p class="hint2">دامنه‌ای که کاربرها باهاش وصل می‌شن (مثلاً sub.example.com). همه لینک‌ها و اشتراک‌ها با همین دامنه ساخته می‌شن. خالی = همون دامنه‌ای که الان باهاش وارد پنل شدی ('+esc(S.realHost||S.host)+').<br>مهم: دامنه باید توی Railway (یا Cloudflare) به سرویس وصل باشه و HTTPS فعال باشه، وگرنه پنل بالا نمیاد.</p><input id="hd" value="'+esc(S.settings.host||'')+'" placeholder="sub.example.com" style="direction:ltr;text-align:left"><button class="btn" id="sh">ذخیره دامنه</button></div>'+
+ '<div class="g2" style="margin-top:14px"><div class="card"><h3><span>آدرس پیش‌فرض کانفیگ‌ها</span></h3><p class="hint2">اگه کلین‌آی‌پی بذاری، توی همه لینک‌ها و اشتراک‌ها به‌جای دامنه استفاده می‌شه. خالی = خود دامنه.</p><input id="ad" value="'+esc(S.settings.addr||'')+'" placeholder="مثلاً 104.16.x.x" style="direction:ltr;text-align:left"><button class="btn" id="sa">ذخیره</button></div>'+
  '<div class="card"><h3><span>رمز پنل</span></h3><input id="np" type="password" placeholder="رمز جدید (حداقل ۶ کاراکتر)"><button class="btn" id="sp">تغییر رمز</button></div></div>'+
  '<div class="card" style="margin-top:14px"><h3><span>Contact · صفحه اشتراک</span></h3><p class="hint2">این دو آیدی توی صفحه اشتراک کاربرها نمایش داده می‌شه. خالی = مخفی.</p><div class="row2"><input id="cs1" placeholder="پشتیبانی" value="'+esc(S.settings.support||'')+'" style="direction:ltr;text-align:left"><input id="cs2" placeholder="کانال" value="'+esc(S.settings.channel||'')+'" style="direction:ltr;text-align:left"></div><button class="btn" id="cs3">ذخیره</button></div>'+
  '<div class="card" style="margin-top:14px"><h3><span>Theme</span></h3><div class="thg">'+THEMES.map(function(t){return '<div class="th'+(S.settings.theme==t[0]?' on':'')+'" data-th="'+t[0]+'"><i style="background:'+t[2]+'"></i>'+t[1]+'</div>'}).join('')+'</div></div>'+
@@ -142,9 +143,10 @@ function vSet(v){v.innerHTML='<div class="sec"><h2>تنظیمات</h2></div><div
    $('ui').innerHTML=(r.available?'<b style="color:var(--ok)">آپدیت جدید موجوده</b>':'<b>نسخه‌ات به‌روزه</b>')+'<br><span style="direction:ltr;display:inline-block">'+r.latest.sha.slice(0,7)+' · '+esc(r.latest.msg)+'</span>';
    b.textContent='بررسی'}).catch(function(){b.textContent='بررسی'})};
  $('ug').onclick=function(){ask('آپدیت از گیت‌هاب نصب بشه؟ پنل چند ثانیه ری‌استارت می‌شه.',function(){var b=$('ug');b.innerHTML='<span class="spin"></span>';
-  usv().then(function(){return api('POST','/api/update/apply')}).then(function(r){toast('نصب شد؛ در حال ری‌استارت...');var n=0,t=setInterval(function(){n++;fetch('/api/me').then(function(x){if(x.ok){clearInterval(t);location.reload()}}).catch(function(){});if(n>40){clearInterval(t);location.reload()}},2000)}).catch(function(){b.textContent='آپدیت'})})};
+  usv().then(function(){return api('POST','/api/update/apply')}).then(function(r){toast('نصب شد؛ در حال ری‌استارت...');var n=0,t=setInterval(function(){n++;fetch('/api/me',{credentials:'same-origin'}).then(function(x){if(x.ok){clearInterval(t);location.reload()}}).catch(function(){});if(n>40){clearInterval(t);location.reload()}},2000)}).catch(function(){b.textContent='آپدیت'})})};
  $('cs3').onclick=function(){api('POST','/api/settings',{support:$('cs1').value,channel:$('cs2').value}).then(function(){toast('ذخیره شد');loadState(1)})};
+ $('sh').onclick=function(){api('POST','/api/settings',{host:$('hd').value}).then(function(){toast('دامنه ذخیره شد');loadState(1)})};
  $('sa').onclick=function(){api('POST','/api/settings',{addr:$('ad').value}).then(function(){toast('ذخیره شد');loadState(1)})};
  $('sp').onclick=function(){api('POST','/api/settings',{pass:$('np').value}).then(function(){$('np').value='';toast('رمز عوض شد')})};
- $('lo').onclick=function(){fetch('/api/logout',{method:'POST'}).then(function(){gate(0)})}}
-fetch('/api/me').then(function(r){gate(r.ok?1:0)});
+ $('lo').onclick=function(){fetch('/api/logout',{method:'POST',credentials:'same-origin'}).then(function(){gate(0)})}}
+fetch('/api/me',{credentials:'same-origin'}).then(function(r){gate(r.ok?1:0)}).catch(function(){gate(0)});

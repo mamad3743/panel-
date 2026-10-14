@@ -214,11 +214,15 @@ const mkToken=()=>{const e=Date.now()+30*864e5;return e+'.'+sign(e)};
 const authed=req=>{const c=(req.headers.cookie||'').split(/;\s*/).find(x=>x.startsWith('bt='));if(!c)return false;
   const[e,s]=c.slice(3).split('.');return !!s&&+e>Date.now()&&crypto.timingSafeEqual(Buffer.from(sign(e)),Buffer.from(s.padEnd(64,'x').slice(0,64)))};
 const fails={};
-const clientIp=req=>{const x=String(req.headers['x-forwarded-for']||'').split(',').map(v=>v.trim()).filter(Boolean);return String(x[x.length-1]||req.headers['x-real-ip']||req.socket.remoteAddress||'').replace(/^::ffff:/,'')};
+const clientIp=req=>{const x=String(req.headers['x-forwarded-for']||'').split(',').map(v=>v.trim()).filter(Boolean);return String(x[0]||req.headers['x-real-ip']||req.socket.remoteAddress||'').replace(/^::ffff:/,'')};
 // speed-test helpers (only for known active users or the logged-in admin)
 const SPBUF=crypto.randomBytes(65536),spQ={};
 const spOk=(ip,add)=>{const n=Date.now(),q=spQ[ip]||(spQ[ip]={b:0,t:n});if(n-q.t>60000){q.b=0;q.t=n}if(q.b+add>300e6)return false;q.b+=add;return true};
-const hostOf=req=>process.env.PUBLIC_HOST||process.env.RAILWAY_PUBLIC_DOMAIN||(req.headers['x-forwarded-host']||req.headers.host||'').split(':')[0];
+const hostOf=req=>{const h=String(req.headers['x-forwarded-host']||req.headers.host||'').split(',')[0].trim().split(':')[0].toLowerCase();return h||'localhost'};
+const cleanHost=s=>{s=String(s||'').trim().toLowerCase().replace(/^https?:\/\//,'').split('/')[0].split(':')[0];return /^[a-z0-9.-]{3,253}$/.test(s)&&s.includes('.')?s:''};
+const effHost=(req,h)=>cleanHost(db.settings.host)||process.env.PUBLIC_HOST||process.env.RAILWAY_PUBLIC_DOMAIN||h||hostOf(req);
+const isSecure=req=>{const p=String(req.headers['x-forwarded-proto']||'').toLowerCase();if(p)return p.split(',')[0].trim()!=='http';return !!req.socket.encrypted};
+const sessCookie=(req,tok)=>'bt='+tok+'; HttpOnly; Path=/; Max-Age=2592000; SameSite=Lax'+(isSecure(req)?'; Secure':'');
 const J=(res,o,c=200)=>{res.writeHead(c,{'content-type':'application/json'});res.end(JSON.stringify(o))};
 const body=req=>new Promise(r=>{let b='';req.on('data',c=>{b+=c;if(b.length>1e5)req.destroy()});req.on('end',()=>{try{r(JSON.parse(b||'{}'))}catch(e){r({})}})});
 const cleanTg=x=>{x=String(x||'').trim().replace(/^https?:\/\/t\.me\//,'').replace(/^@/,'');return /^[A-Za-z0-9_]{3,40}$/.test(x)?x:''};
@@ -250,15 +254,15 @@ http.createServer(async(req,res)=>{
   if(u.startsWith('/sub/')){
     const x=db.users.find(v=>v.id===u.slice(5)),html=(req.headers.accept||'').includes('text/html')&&!U.searchParams.has('raw');
     if(!x){res.writeHead(404,{'content-type':'text/plain'});return res.end('Not found')}
-    const st=status(x),L=st==='active'?linksFor(x,h,addr):[];
+    const hh=effHost(req,h),st=status(x),L=st==='active'?linksFor(x,hh,addr):[];
     if(!html){
       if(st!=='active'){res.writeHead(403,{'content-type':'text/plain'});return res.end(st)}
       res.writeHead(200,{'content-type':'text/plain; charset=utf-8','profile-title':'BATAMN','profile-update-interval':'12',...(contact().support?{'support-url':'https://t.me/'+contact().support}:{}),...(contact().channel?{'profile-web-page-url':'https://t.me/'+contact().channel}:{}),
         'subscription-userinfo':'upload=0; download='+x.used+'; total='+x.limit+'; expire='+(x.exp?Math.floor(x.exp/1000):0)});
       return res.end(Buffer.from(L.map(i=>i.l).join('\n')).toString('base64'));
     }
-    const subUrl='https://'+h+'/sub/'+x.id+(addr?'?addr='+encodeURIComponent(addr):'');
-    const data={id:x.id,online:onlineOf(x.id).length,maxDev:x.maxDev||0,contact:contact(),sub:subUrl,status:st,used:x.used,limit:x.limit,exp:x.exp,links:L.map(i=>({n:i.n,l:i.l,qr:qrSvg(i.l)}))};
+    const subUrl='https://'+hh+'/sub/'+x.id+(addr?'?addr='+encodeURIComponent(addr):'');
+    const data={id:x.id,online:onlineOf(x.id).length,maxDev:x.maxDev||0,contact:contact(),sub:subUrl,host:hh,status:st,used:x.used,limit:x.limit,exp:x.exp,links:L.map(i=>({n:i.n,l:i.l,qr:qrSvg(i.l)}))};
     const page=SUB.replace('__THEME__',db.settings.theme||'knight').replace(/__NAME__/g,()=>esc(x.name)).replace('__QR__',()=>st==='active'?qrSvg(subUrl):'').replace('__DATA__',()=>JSON.stringify(data).replace(/</g,'\\u003c'));
     return res.writeHead(200,{'content-type':'text/html; charset=utf-8','cache-control':'no-store'}),res.end(page);
   }
@@ -267,10 +271,10 @@ http.createServer(async(req,res)=>{
     if(Date.now()-f.t>600000){f.n=0;f.t=Date.now()}
     if(f.n>=8)return J(res,{e:'تلاش زیاد. بعداً امتحان کن'},429);
     const b=await body(req);
-    if(typeof b.pass==='string'&&b.pass===db.settings.pass){delete fails[ip];res.setHeader('Set-Cookie','bt='+mkToken()+'; HttpOnly; Secure; SameSite=Strict; Path=/; Max-Age=2592000');return J(res,{ok:1})}
+    if(typeof b.pass==='string'&&b.pass===db.settings.pass){delete fails[ip];res.setHeader('Set-Cookie',sessCookie(req,mkToken()));return J(res,{ok:1})}
     f.n++;fails[ip]=f;return J(res,{e:'رمز اشتباهه'},401);
   }
-  if(u==='/api/logout'){res.setHeader('Set-Cookie','bt=; Path=/; Max-Age=0');return J(res,{ok:1})}
+  if(u==='/api/logout'){res.setHeader('Set-Cookie','bt=; Path=/; Max-Age=0; SameSite=Lax'+(isSecure(req)?'; Secure':''));return J(res,{ok:1})}
   if(u.startsWith('/api/')){
     if(!authed(req))return J(res,{e:1},401);
     if(u==='/api/me')return J(res,{ok:1});
@@ -278,8 +282,8 @@ http.createServer(async(req,res)=>{
       pup:process.uptime(),load:os.loadavg(),conns,online:onlineSummary(),region:process.env.RAILWAY_REPLICA_REGION||process.env.RAILWAY_REGION||'—',
       xray:{on:!!(xray&&xray.exitCode===null),mem:xrayMem()}});
     if(u==='/api/state'){
-      const D=dates14();return J(res,{host:h,settings:{addr:db.settings.addr,theme:db.settings.theme||'knight',...contact(),...repoCfg(),auto:!!db.settings.auto,hasToken:!!db.settings.token},version:curVersion(),inbounds:db.inbounds,daily:{dates:D,total:D.map(d=>(db.daily||{})[d]||0)},
-        users:db.users.map(x=>pubUser(x,h,addr,true)),totalUsed:db.users.reduce((a,x)=>a+x.used,0)});
+      const D=dates14(),hh=effHost(req,h);return J(res,{host:hh,realHost:h,settings:{addr:db.settings.addr,host:db.settings.host||'',theme:db.settings.theme||'knight',...contact(),...repoCfg(),auto:!!db.settings.auto,hasToken:!!db.settings.token},version:curVersion(),inbounds:db.inbounds,daily:{dates:D,total:D.map(d=>(db.daily||{})[d]||0)},
+        users:db.users.map(x=>pubUser(x,hh,addr,true)),totalUsed:db.users.reduce((a,x)=>a+x.used,0)});
     }
     const b=await body(req);
     if(u==='/api/users'){db.users.push({id:crypto.randomUUID(),name:cleanName(b.name),on:true,created:Date.now(),
@@ -307,8 +311,9 @@ http.createServer(async(req,res)=>{
       if(b.auto!=null)db.settings.auto=!!b.auto;
       if(b.support!=null)db.settings.support=cleanTg(b.support);if(b.channel!=null)db.settings.channel=cleanTg(b.channel);
       if(b.addr!=null)db.settings.addr=cleanAddr(String(b.addr).trim());
+      if(b.host!=null){const v=String(b.host).trim().toLowerCase().replace(/^https?:\/\//,'').split('/')[0];if(v&&!/^[a-z0-9.-]{3,253}$/.test(v))return J(res,{e:'دامنه نامعتبره (مثل sub.example.com)'},400);db.settings.host=v?cleanHost(v):'';}
       if(b.pass){if(String(b.pass).length<6)return J(res,{e:'رمز حداقل ۶ کاراکتر'},400);db.settings.pass=String(b.pass);db.secret=crypto.randomBytes(24).toString('hex');
-        res.setHeader('Set-Cookie','bt='+mkToken()+'; HttpOnly; Secure; SameSite=Strict; Path=/; Max-Age=2592000')}
+        res.setHeader('Set-Cookie',sessCookie(req,mkToken()))}
       save();return J(res,{ok:1})}
     if(u==='/api/update/check'){try{const L=await latest(),cur=curVersion();return J(res,{current:cur,latest:L,available:L.sha!==cur.sha})}catch(e){return J(res,{e:e.message},502)}}
     if(u==='/api/update/apply'&&req.method==='POST'){try{const L=await applyUpdate();J(res,{ok:1,latest:L});restartApp();return}catch(e){return J(res,{e:e.message},500)}}

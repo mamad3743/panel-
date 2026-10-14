@@ -2,31 +2,89 @@
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="theme-color" content="#04060a"><title>BATAMN · __NAME__</title>
 <link rel="preload" href="/fonts/vazir.woff2" as="font" type="font/woff2" crossorigin><link rel="preload" href="/fonts/inter.woff2" as="font" type="font/woff2" crossorigin>
-<link rel="stylesheet" href="/style.css"></head><body><div class="bgimg"></div>
+<link rel="stylesheet" href="/style.css">
+<style>
+.spx{max-width:540px}
+.spx-top{display:flex;align-items:center;justify-content:space-between;padding:8px 4px 16px}
+.spx-brand{display:flex;align-items:center;gap:10px;color:var(--ac)}
+.spx-brand svg{width:42px;height:21px;filter:drop-shadow(0 0 10px rgba(var(--rgb),.5))}
+.spx-brand b{font-size:17px;letter-spacing:.4em;font-weight:700;background:linear-gradient(180deg,#fff,rgba(var(--rgb),.9));-webkit-background-clip:text;background-clip:text;color:transparent}
+.spx-hero{position:relative;overflow:hidden;text-align:center;padding:26px 20px 20px}
+.spx-hero:before{content:"";position:absolute;left:15%;right:15%;top:0;height:1px;background:linear-gradient(90deg,transparent,var(--ac),transparent)}
+.spx-ring{position:relative;width:168px;height:168px;margin:2px auto 10px}
+.spx-ring svg{width:100%;height:100%;transform:rotate(-90deg);filter:drop-shadow(0 0 12px rgba(var(--rgb),.4))}
+.spx-ring .c{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center}
+.spx-ring b{font-size:32px;font-weight:700;color:#fff;font-family:var(--fm)}
+.spx-ring small{color:var(--mu);font-size:10px;letter-spacing:3px;margin-top:2px}
+.spx-name{margin:0;font-size:22px;font-weight:700}
+.spx-sub{color:var(--mu);font-size:12px;margin-top:4px;font-family:var(--fm);direction:ltr}
+.spx-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:10px;margin-top:16px}
+.spx-t{background:rgba(255,255,255,.035);border:1px solid var(--line);border-radius:14px;padding:11px 8px}
+.spx-t small{display:block;color:var(--mu);font-size:9.5px;letter-spacing:2px;margin-bottom:5px;font-weight:600}
+.spx-t b{font-size:15px;font-weight:600;color:#fff;font-family:var(--fm);direction:ltr;display:inline-block}
+.spx-t em{display:block;font-style:normal;color:var(--mu);font-size:10.5px;margin-top:2px;min-height:14px}
+.spx-t.wide{grid-column:1/-1}
+.spx-dots{display:flex;justify-content:center;gap:7px;margin-top:8px;min-height:10px}
+.spx-bar{height:6px;border-radius:9px;background:rgba(255,255,255,.07);overflow:hidden;margin-top:14px}
+.spx-bar i{display:block;height:100%;border-radius:9px;background:linear-gradient(90deg,var(--ac2),var(--ac3));transition:width 1.2s cubic-bezier(.2,.8,.2,1)}
+.spx-actions{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:14px}
+.spx-qrbox{background:#fff;border-radius:16px;padding:10px;width:200px;height:200px;margin:16px auto 6px;display:none}
+.spx-qrbox.o{display:block}
+.spx-qrbox svg{width:100%;height:100%;display:block}
+.spx-apps{display:grid;grid-template-columns:repeat(2,1fr);gap:8px;margin-top:12px}
+.spx-apps a{display:block;text-align:center;text-decoration:none;padding:10px 8px;border-radius:12px;border:1px solid var(--line);background:rgba(var(--rgb),.07);color:var(--ac3);font-size:13px;font-weight:600;transition:.2s}
+.spx-apps a:active{transform:scale(.97)}
+.spx-cf{display:flex;align-items:center;gap:12px;padding:12px 0;border-top:1px solid var(--line)}
+.spx-cf:first-of-type{border-top:0}
+.spx-cf .g{flex:1;min-width:0}
+.spx-cf b{font-size:13.5px;display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.spx-cf small{color:var(--mu);font-size:10.5px;font-family:var(--fm);direction:ltr;display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.spx-q{display:none;background:#fff;border-radius:14px;padding:8px;width:180px;height:180px;margin:4px auto 12px}
+.spx-q.o{display:block}.spx-q svg{width:100%;height:100%;display:block}
+.spx-dead{text-align:center;padding:26px 10px}
+.spx-dead .ic{font-size:44px;margin-bottom:8px}
+.spx-dead h2{margin:0 0 6px;font-size:19px}
+.spx-dead p{color:var(--mu);font-size:13px;margin:0 0 4px}
+.spx-sup{display:flex;gap:10px}
+@media(max-width:440px){.spx-sup{flex-direction:column}.spx-actions{grid-template-columns:1fr}}
+</style></head><body><div class="bgimg"></div>
 <svg width="0" height="0" style="position:absolute"><defs><symbol id="bat" viewBox="0 0 200 100"><path d="M100 26L104 12L108 25L116 24C140 14 172 18 196 40C184 40 176 46 172 58C164 50 152 50 146 60C140 54 132 56 128 66C124 60 116 62 112 74L106 66L100 78L94 66L88 74C84 62 76 60 72 66C68 56 60 54 54 60C48 50 36 50 28 58C24 46 16 40 4 40C28 18 60 14 84 24L92 25L96 12L100 26Z"/></symbol></defs></svg>
-<div class="wrap sp">
-  <div class="top" style="justify-content:center"><div class="brand"><svg class="emb" viewBox="0 0 200 100"><use href="#bat"/></svg><b>BATAMN</b></div></div>
-  <div class="card hero">
-    <div class="ringw"><svg viewBox="0 0 176 176"><defs><linearGradient id="rg" x1="0" y1="0" x2="1" y2="1"><stop offset="0" style="stop-color:var(--ac3)"/><stop offset="1" style="stop-color:var(--ac2)"/></linearGradient></defs>
-      <circle cx="88" cy="88" r="76" fill="none" stroke="rgba(255,255,255,.07)" stroke-width="9"/><circle id="rp" cx="88" cy="88" r="76" fill="none" stroke="url(#rg)" stroke-width="9" stroke-linecap="round" stroke-dasharray="0 478"/></svg>
-      <div class="c"><b id="rn">—</b><small id="rl">USED</small></div></div>
-    <h2>__NAME__</h2><span class="pill" id="stp"><i></i><span></span></span>
-    <div class="tiles">
-      <div class="tile"><small>USED</small><b id="t1">—</b></div><div class="tile"><small>REMAINING</small><b id="t2">—</b></div>
-      <div class="tile"><small>TOTAL</small><b id="t3">—</b></div><div class="tile"><small>EXPIRES</small><b id="t4">—</b><em id="t4d"></em></div>
-    <div class="tile wide"><small>DEVICES ONLINE</small><b id="dv">—</b><div class="dots" id="dd"></div></div>
+<div class="wrap spx sp">
+  <div class="spx-top"><div class="spx-brand"><svg class="emb" viewBox="0 0 200 100"><use href="#bat"/></svg><b>BATAMN</b></div><span class="pill" id="stp"><i></i><span></span></span></div>
+
+  <div class="card spx-hero" id="hero">
+    <div id="deadBox"></div>
+    <div id="liveBox">
+      <div class="spx-ring"><svg viewBox="0 0 176 176"><defs><linearGradient id="rg" x1="0" y1="0" x2="1" y2="1"><stop offset="0" style="stop-color:var(--ac3)"/><stop offset="1" style="stop-color:var(--ac2)"/></linearGradient></defs>
+        <circle cx="88" cy="88" r="76" fill="none" stroke="rgba(255,255,255,.07)" stroke-width="9"/><circle id="rp" cx="88" cy="88" r="76" fill="none" stroke="url(#rg)" stroke-width="9" stroke-linecap="round" stroke-dasharray="0 478"/></svg>
+        <div class="c"><b id="rn">—</b><small id="rl">USED</small></div></div>
+      <h2 class="spx-name">__NAME__</h2>
+      <div class="spx-sub" id="hostline"></div>
+      <div class="spx-grid">
+        <div class="spx-t"><small>USED</small><b id="t1">—</b></div>
+        <div class="spx-t"><small>REMAINING</small><b id="t2">—</b></div>
+        <div class="spx-t"><small>TOTAL</small><b id="t3">—</b></div>
+        <div class="spx-t"><small>EXPIRES</small><b id="t4">—</b><em id="t4d"></em></div>
+        <div class="spx-t wide"><small>DEVICES ONLINE</small><b id="dv">—</b><div class="spx-dots" id="dd"></div></div>
+      </div>
+      <div class="spx-bar"><i id="bar"></i></div>
     </div>
   </div>
-  <div class="card ct" id="ctc"><div class="ctr" id="ctr"></div></div>
-  <div class="card" id="act"><h3><span>Subscription</span></h3>
-    <div class="qrb" id="qrb">__QR__</div>
-    <p class="hint">QR رو توی کلاینت اسکن کن یا لینک اشتراک رو کپی کن</p>
-    <button class="btn" id="cs">کپی لینک اشتراک</button>
-    <div class="apps" id="apps"></div>
+
+  <div class="card ct" id="ctc" style="margin-top:14px"><h3><span>پشتیبانی</span></h3><div class="ctr spx-sup" id="ctr"></div></div>
+
+  <div class="card" id="act" style="margin-top:14px"><h3><span>Subscription · اشتراک</span><span id="copyHint"></span></h3>
+    <div class="spx-qrbox" id="qrb">__QR__</div>
+    <p class="hint">QR رو توی کلاینت اسکن کن یا لینک اشتراک رو کپی کن. اشتراک هر ۱۲ ساعت خودکار آپدیت می‌شه.</p>
+    <div class="spx-actions"><button class="btn" id="cs">کپی لینک اشتراک</button><button class="sm" id="qrbtn">نمایش QR</button></div>
+    <div class="spx-apps" id="apps"></div>
   </div>
-  <div class="card" id="cc"><h3><span>Configs</span></h3><div id="cfs"></div></div>
-  <div class="card" id="spc"><h3><span>Speed test</span><span id="sst"></span></h3><div class="sp4"><div><small>PING</small><b id="s_p">—</b></div><div><small>JITTER</small><b id="s_j">—</b></div><div><small>DOWNLOAD</small><b id="s_d">—</b></div><div><small>UPLOAD</small><b id="s_u">—</b></div></div><button class="btn" id="s_go">شروع تست سرعت</button><p class="hint" style="margin:12px 0 0">سرعت اتصال اینترنت تو تا سرور رو نشون می‌ده</p></div>
-  <div class="card"><h3><span>راهنما</span></h3><ol class="st"><li>یکی از اپ‌های بالا رو نصب کن (v2rayNG، Hiddify، Streisand یا Shadowrocket)</li><li>لینک اشتراک رو اضافه کن یا QR رو اسکن کن</li><li>اشتراک رو آپدیت کن و یک کانفیگ رو انتخاب و وصل شو</li></ol></div>
+
+  <div class="card" id="cc" style="margin-top:14px"><h3><span>Configs · کانفیگ‌ها</span><span id="ccn"></span></h3><div id="cfs"></div></div>
+
+  <div class="card" id="spc" style="margin-top:14px"><h3><span>Speed test · تست سرعت</span><span id="sst"></span></h3><div class="sp4"><div><small>PING</small><b id="s_p">—</b></div><div><small>JITTER</small><b id="s_j">—</b></div><div><small>DOWNLOAD</small><b id="s_d">—</b></div><div><small>UPLOAD</small><b id="s_u">—</b></div></div><button class="btn" id="s_go">شروع تست سرعت</button><p class="hint" style="margin:12px 0 0">سرعت اتصال اینترنت تو تا سرور رو نشون می‌ده</p></div>
+
+  <div class="card" style="margin-top:14px"><h3><span>راهنما</span></h3><ol class="st"><li>یکی از اپ‌های بالا رو نصب کن (v2rayNG، Hiddify، Streisand یا Shadowrocket)</li><li>لینک اشتراک رو اضافه کن یا QR رو اسکن کن</li><li>اشتراک رو آپدیت کن و یک کانفیگ رو انتخاب و وصل شو</li><li>اگه وصل نشد، اول تست سرعت بگیر بعد به پشتیبانی پیام بده</li></ol></div>
   <div class="ft" id="ft">BATAMN</div>
 </div>
 <div id="toast"></div>
@@ -34,16 +92,26 @@
 <script>
 var D=__DATA__,$=function(i){return document.getElementById(i)};
 function toast(t){var e=$('toast');e.textContent=t;e.className='s';setTimeout(function(){e.className=''},1500)}
-function cp(t,m){(navigator.clipboard?navigator.clipboard.writeText(t):Promise.reject()).catch(function(){var a=document.createElement('textarea');a.value=t;document.body.appendChild(a);a.select();document.execCommand('copy');a.remove()});toast(m)}
+function cp(t,m){(navigator.clipboard?navigator.clipboard.writeText(t):Promise.reject()).catch(function(){var a=document.createElement('textarea');a.value=t;document.body.appendChild(a);a.select();try{document.execCommand('copy')}catch(e){}a.remove()});toast(m)}
 function B(n){var u=['B','KB','MB','GB','TB'],i=0;while(n>=1024&&i<4){n/=1024;i++}return n.toFixed(i>1?2:0)+' '+u[i]}
-var ST={active:['فعال','ok'],off:['غیرفعال','bad'],expired:['منقضی شده','bad'],limited:['حجم تمام شده','bad']}[D.status];
+var STMAP={active:['فعال','ok'],off:['غیرفعال','bad'],expired:['منقضی شده','bad'],limited:['حجم تمام شده','bad']};
+var ST=STMAP[D.status]||STMAP.off;
 $('stp').className='pill '+ST[1];$('stp').lastChild.textContent=ST[0];
 var pc=D.limit?Math.min(100,D.used/D.limit*100):0,days=D.exp?Math.max(0,Math.ceil((D.exp-Date.now())/864e5)):null;
-$('t1').textContent=B(D.used);$('t2').textContent=D.limit?B(Math.max(0,D.limit-D.used)):'∞';$('t3').textContent=D.limit?B(D.limit):'∞';
-$('t4').textContent=D.exp?days+' روز':'∞';
-$('rn').textContent=D.limit?Math.round(pc)+'%':'∞';$('rl').textContent=D.limit?'USED':'UNLIMITED';
-setTimeout(function(){$('rp').style.strokeDasharray=(D.limit?pc/100*478:478)+' 478';if(!D.limit)$('rp').style.opacity='.35'},250);
-try{if(D.exp)$('t4d').textContent=new Intl.DateTimeFormat('fa-IR-u-ca-persian',{year:'numeric',month:'2-digit',day:'2-digit'}).format(new Date(D.exp))}catch(e){}
+if(D.status==='active'){
+  $('t1').textContent=B(D.used);$('t2').textContent=D.limit?B(Math.max(0,D.limit-D.used)):'∞';$('t3').textContent=D.limit?B(D.limit):'∞';
+  $('t4').textContent=D.exp?days+' روز':'∞';
+  $('rn').textContent=D.limit?Math.round(pc)+'%':'∞';$('rl').textContent=D.limit?'USED':'UNLIMITED';
+  setTimeout(function(){$('rp').style.strokeDasharray=(D.limit?pc/100*478:478)+' 478';if(!D.limit)$('rp').style.opacity='.35';$('bar').style.width=(D.limit?pc:100)+'%';if(pc>90)$('bar').style.background='linear-gradient(90deg,#b23a4d,var(--bad))';else if(pc>75)$('bar').style.background='linear-gradient(90deg,#b98a2c,var(--warn))'},250);
+  try{if(D.exp)$('t4d').textContent=new Intl.DateTimeFormat('fa-IR-u-ca-persian',{year:'numeric',month:'2-digit',day:'2-digit'}).format(new Date(D.exp))}catch(e){}
+}else{
+  var msgs={off:['💤','غیرفعاله','این اشتراک توسط مدیر غیرفعال شده. به پشتیبانی پیام بده.'],expired:['⌛','تموم شده','مدت اشتراکت تموم شده. برای تمدید به پشتیبانی پیام بده.'],limited:['📦','حجمت تموم شده','حجم اشتراکت تموم شده. برای تمدید به پشتیبانی پیام بده.']};
+  var m=msgs[D.status]||msgs.off;
+  $('liveBox').style.display='none';
+  $('deadBox').innerHTML='<div class="spx-dead"><div class="ic">'+m[0]+'</div><h2>'+m[1]+'</h2><p>'+m[2]+'</p><p style="font-family:var(--fm);direction:ltr">'+B(D.used)+' / '+(D.limit?B(D.limit):'∞')+'</p></div>';
+  $('act').style.display='none';$('cc').style.display='none';$('spc').style.display='none';
+}
+try{$('hostline').textContent=(D.host||location.hostname)+' · '+D.id.slice(0,8)}catch(e){}
 var TG='<svg viewBox="0 0 24 24"><path fill="currentColor" d="M21.6 3.4L2.7 10.7c-.9.35-.9 1.6.05 1.9l4.6 1.5 1.8 5.6c.2.7 1.1.9 1.6.4l2.6-2.4 4.7 3.5c.6.4 1.4.1 1.6-.6L23.1 5c.2-.9-.7-1.8-1.5-1.6zM9.4 13.6l8.2-5.1-6.3 6.1-.3 3z"/></svg>',C=D.contact||{},cx='';
 if(C.support)cx+='<a class="tg" href="https://t.me/'+C.support+'" target="_blank" rel="noopener">'+TG+'<span><b>پشتیبانی و تمدید</b><small>@'+C.support+'</small></span></a>';
 if(C.channel)cx+='<a class="tg" href="https://t.me/'+C.channel+'" target="_blank" rel="noopener">'+TG+'<span><b>کانال اطلاع‌رسانی</b><small>@'+C.channel+'</small></span></a>';
@@ -53,10 +121,11 @@ function dev(n,m){$('dv').textContent=n+(m?' / '+m:'');var d='';if(m){for(var i=
 dev(D.online||0,D.maxDev||0);
 if(D.status=='active'){setInterval(function(){fetch('/sub/'+D.id+'/live',{cache:'no-store'}).then(function(r){return r.json()}).then(function(x){dev(x.online,x.max)}).catch(function(){})},8000)}
 SpeedTest.bind('u='+D.id);
-if(D.status!='active'){$('act').style.display='none';$('cc').style.display='none';$('spc').style.display='none'}
 var U=D.sub,E=encodeURIComponent(U);
-$('cs').onclick=function(){cp(U,'کپی شد')};
-$('apps').innerHTML=[['v2rayNG','v2rayng://install-sub?url='+E+'&name=BATAMN'],['Hiddify','hiddify://import/'+U+'#BATAMN'],['Streisand','streisand://import/'+U],['Shadowrocket','shadowrocket://add/sub://'+btoa(U)+'?remark=BATAMN']].map(function(a){return '<a class="sm" href="'+a[1]+'">'+a[0]+'</a>'}).join('');
-$('cfs').innerHTML=D.links.map(function(l,i){return '<div class="cf"><div class="badge">'+l.n.slice(0,2).toUpperCase()+'</div><div class="g"><b>'+l.n+'</b></div><div style="display:flex;gap:6px"><button class="sm" data-q="'+i+'">QR</button><button class="sm p" data-c="'+i+'">کپی</button></div></div><div class="qs" id="q'+i+'">'+l.qr+'</div>'}).join('');
+$('cs').onclick=function(){cp(U,'لینک اشتراک کپی شد')};
+var qb=$('qrb');if(qb.innerHTML.trim()){qb.classList.add('o')}$('qrbtn').onclick=function(){qb.classList.toggle('o');this.textContent=qb.classList.contains('o')?'مخفی کردن QR':'نمایش QR'};
+$('apps').innerHTML=[['v2rayNG','v2rayng://install-sub?url='+E+'&name=BATAMN'],['Hiddify','hiddify://import/'+U+'#BATAMN'],['Streisand','streisand://import/'+U],['Shadowrocket','shadowrocket://add/sub://'+btoa(U)+'?remark=BATAMN']].map(function(a){return '<a href="'+a[1]+'">'+a[0]+'</a>'}).join('');
+$('ccn').textContent=D.links.length+' کانفیگ';
+$('cfs').innerHTML=D.links.map(function(l,i){var proto='';try{proto=l.l.split('://')[0].toUpperCase()}catch(e){}return '<div class="spx-cf"><div class="badge">'+l.n.slice(0,2).toUpperCase()+'</div><div class="g"><b>'+l.n+'</b><small>'+proto+' · کلیک کن کپی میشه</small></div><div style="display:flex;gap:6px"><button class="sm" data-q="'+i+'">QR</button><button class="sm p" data-c="'+i+'">کپی</button></div></div><div class="spx-q" id="q'+i+'">'+l.qr+'</div>'}).join('');
 $('cfs').onclick=function(e){var b=e.target.closest('button');if(!b)return;if(b.dataset.c!=null)cp(D.links[b.dataset.c].l,'کانفیگ کپی شد');if(b.dataset.q!=null)$('q'+b.dataset.q).classList.toggle('o')};
 </script></body></html>
