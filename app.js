@@ -20,7 +20,7 @@ function loginFx(on){FX.on=!!on;var l=$('login');if(l)l.classList.toggle('fx',!!
 function shakeLogin(){var f=$('lf');f.classList.remove('shake');void f.offsetWidth;f.classList.add('shake')}
 $('eye').onclick=function(){var p=$('pw');p.type=p.type=='password'?'text':'password';this.textContent=p.type=='password'?'👁':'🙈';p.focus()};
 function bars(a,h,cls){var mx=Math.max.apply(null,a.concat([1])),n=a.length,w=100/n;return '<svg class="'+cls+'" viewBox="0 0 100 '+h+'" preserveAspectRatio="none">'+a.map(function(v,i){var bh=Math.max(v?1.5:.7,v/mx*(h-2));
- return '<rect x="'+(i*w+w*.14).toFixed(2)+'" y="'+(h-bh).toFixed(2)+'" width="'+(w*.72).toFixed(2)+'" height="'+bh.toFixed(2)+'" fill="'+(i==n-1?'var(--ac3)':'var(--ac)')+'" fill-opacity="'+(v?(i==n-1?1:.6):.14)+'"/>'}).join('')+'</svg>'}
+ return '<rect x="'+(i*w+w*.14).toFixed(2)+'" y="'+(h-bh).toFixed(2)+'" width="'+(w*.72).toFixed(2)+'" height="'+bh.toFixed(2)+'" style="fill:'+(i==n-1?'var(--ac3)':'var(--ac)')+'" fill-opacity="'+(v?(i==n-1?1:.6):.14)+'"/>'}).join('')+'</svg>'}
 /* ---------- gate ---------- */
 function gate(p){loginFx(!p);$('login').className=p?'hide':'';$('panel').className=p?'wrap':'hide';$('dock').className=p?'dock':'dock hide';clearInterval(T1);clearInterval(T2);
  if(p){dock();$('view').innerHTML='<div class="sk"></div><div class="sk"></div><div class="sk"></div>';loadState();sys();T1=setInterval(sys,3000);T2=setInterval(function(){if(TAB=='users'||TAB=='dash')loadState(1)},15000)}}
@@ -29,7 +29,9 @@ $('lf').onsubmit=function(e){e.preventDefault();$('err').textContent='';
   if(r.ok){$('pw').value='';var l=$('login');l.classList.add('go');setTimeout(function(){l.classList.remove('go');gate(1)},750)}else r.json().then(function(d){$('err').textContent=d.e||'رمز اشتباهه';shakeLogin()})})};
 function dock(){$('dock').innerHTML=TABS.map(function(t){return '<button data-t="'+t[0]+'" class="'+(t[0]==TAB?'on':'')+'"><svg viewBox="0 0 24 24">'+IC[t[0]]+'</svg>'+t[1]+'</button>'}).join('')}
 $('dock').onclick=function(e){var b=e.target.closest('button');if(!b)return;TAB=b.dataset.t;localStorage.tab=TAB;dock();render();window.scrollTo(0,0)};
-function loadState(quiet){return api('GET','/api/state'+AD()).then(function(d){S=d;if(!quiet||TAB!='users'||!document.querySelector('.ov:not(.hide)'))render()})}
+function loadState(quiet){return api('GET','/api/state'+AD()).then(function(d){S=d;
+ SEL.forEach(function(id){if(!S.users.some(function(u){return u.id==id}))SEL.delete(id)});
+ if(!quiet||TAB!='users'||!document.querySelector('.ov:not(.hide)'))render()})}
 /* ---------- sys ---------- */
 function bar(id,p){var e=$(id);if(!e)return;e.style.width=Math.min(100,Math.max(1,p))+'%';e.className=p>90?'d':p>75?'w':''}
 function put(id,v){var e=$(id);if(e)e.textContent=v}
@@ -79,7 +81,7 @@ function uCard(u){var pct=u.limit?Math.min(100,u.used/u.limit*100):0,st={active:
  '<div class="um"><span><b>'+B(u.used)+'</b> / '+(u.limit?B(u.limit):'∞')+'</span><span>امروز <b>'+B(td)+'</b></span></div>'+bars(u.days,24,'mini')+'<div class="um" style="margin-top:6px"><span>دستگاه آنلاین</span><span class="onc'+(u.online?' live':'')+'"><i></i><b class="onl" data-u="'+u.id+'">'+u.online+'</b> / '+(u.maxDev||'∞')+'</span></div>'+(u.note?'<div class="note">'+esc(u.note)+'</div>':'')+
  '<div class="chips">'+u.links.map(function(l){return '<span class="chip" data-a="cfg" data-i="'+u.id+'" data-k="'+l.k+'">'+esc(l.loc||l.n)+'</span>'}).join('')+'</div>'+
  '<div class="ac"><button class="sm p" data-a="sub" data-i="'+u.id+'">لینک اشتراک</button><button class="sm" data-a="pg" data-i="'+u.id+'">صفحه</button><button class="sm" data-a="ed" data-i="'+u.id+'">ویرایش</button></div></div>'}
-var FL='all',SEL=new Set();
+var FL='all',SEL=new Set(),SORT=localStorage.sort||'new';
 function bulkUI(){var n=SEL.size,e=$('bulk');if(e)e.classList.toggle('on',n>0);var c=$('bcnt');if(c)c.textContent=n+' انتخاب'}
 function bulkDo(a){var ids=Array.from(SEL);if(!ids.length)return toast('اول چند کاربر رو تیک بزن');var p={action:a,ids:ids};if(a=='extend')p.days=+$('bd').value||30;
  var go=function(){api('POST','/api/users/bulk',p).then(function(){SEL.clear();toast('انجام شد');loadState()})};
@@ -88,12 +90,18 @@ document.addEventListener('change',function(e){var c=e.target.closest('.uck');if
 function vUsers(v){var c={all:S.users.length,active:0,expired:0,off:0};S.users.forEach(function(u){if(u.status=='active')c.active++;else if(u.status=='off')c.off++;else c.expired++});
  v.innerHTML='<div class="sec"><h2>کاربران</h2><span class="pill">'+S.users.length+'</span></div><div class="tbar"><input id="q" placeholder="جستجو..." value="'+esc(Q)+'"><button class="btn" id="nu">+ جدید</button></div>'+
  '<div class="fch" id="fc">'+[['all','همه'],['active','فعال'],['expired','منقضی'],['off','غیرفعال']].map(function(f){return '<span class="fc'+(FL==f[0]?' on':'')+'" data-f="'+f[0]+'">'+f[1]+'<i>'+c[f[0]]+'</i></span>'}).join('')+'</div>'+
+ '<div class="srow"><span>مرتب‌سازی</span><select id="sort"><option value="new">جدیدترین</option><option value="used">پر‌مصرف‌ترین</option><option value="name">نام (الفبا)</option><option value="exp">انقضای نزدیک</option></select></div>'+
  '<div class="bulk" id="bulk"><label><input type="checkbox" id="sall"> همه</label><b id="bcnt">0 انتخاب</b><input id="bd" type="number" min="1" max="3650" value="30"><button class="sm" id="bext">+ تمدید</button><button class="sm" id="brs">ریست ترافیک</button><button class="sm x" id="bdel">حذف</button><button class="sm" id="bclr">✕</button></div><div class="ug" id="ul"></div>';
  $('nu').onclick=newUser;$('q').oninput=function(){Q=this.value;ulist()};$('fc').onclick=function(e){var t=e.target.closest('[data-f]');if(!t)return;FL=t.dataset.f;vUsers(v)};
  $('sall').onchange=function(){var bx=document.querySelectorAll('.uck');if(this.checked){bx.forEach(function(x){x.checked=true;SEL.add(x.dataset.i)})}else{bx.forEach(function(x){x.checked=false});SEL.clear()}bulkUI()};
  $('bclr').onclick=function(){SEL.clear();ulist()};$('brs').onclick=function(){bulkDo('reset')};$('bdel').onclick=function(){bulkDo('delete')};$('bext').onclick=function(){bulkDo('extend')};
+ $('sort').value=SORT;$('sort').onchange=function(){SORT=this.value;localStorage.sort=SORT;ulist()};
  ulist();bulkUI()}
 function ulist(){var l=S.users.filter(function(u){var m=u.name.toLowerCase().indexOf(Q.toLowerCase())>=0,s=FL=='all'||(FL=='active'&&u.status=='active')||(FL=='off'&&u.status=='off')||(FL=='expired'&&(u.status=='expired'||u.status=='limited'));return m&&s});
+ if(SORT=='used')l.sort(function(a,b){return b.used-a.used});
+ else if(SORT=='name')l.sort(function(a,b){return String(a.name).localeCompare(String(b.name),'fa')});
+ else if(SORT=='exp')l.sort(function(a,b){return (a.exp||Infinity)-(b.exp||Infinity)});
+ else l.sort(function(a,b){return b.created-a.created});
  $('ul').innerHTML=l.length?l.map(uCard).join(''):'<div class="empty" style="grid-column:1/-1">کاربری پیدا نشد</div>';bulkUI()}
 document.addEventListener('click',function(e){var k=e.target.closest('[data-kick]');
  if(k){e.stopPropagation();ask('اتصال '+esc(k.dataset.kick)+' قطع بشه؟ (۳۰ دقیقه بلاک)',function(){api('POST','/api/user/kick',{id:k.dataset.uid,rule:k.dataset.kick}).then(function(){toast('قطع شد');sys()})});return}
@@ -137,7 +145,7 @@ function vInb(v){v.innerHTML='<div class="sec"><h2>اینباندها</h2><butto
 function vScan(v){v.innerHTML='<div class="sec"><h2>اسکنر کلین‌آی‌پی</h2></div><div class="card"><p class="hint2">چند آی‌پی تصادفی از رنج‌های CDN تست می‌شه و سریع‌ترین‌ها نشون داده می‌شن. پینگ از سمت سرور اندازه‌گیری می‌شه؛ آی‌پی‌ها رو بعداً توی کلاینتت هم امتحان کن.</p>'+
  '<span class="lab">SNI</span><input id="sn" value="speed.cloudflare.com" style="direction:ltr;text-align:left"><span class="lab">تعداد آی‌پی</span><select id="sc"><option>40</option><option selected>80</option><option>150</option></select><button class="btn" id="go">شروع اسکن</button></div><div class="card" id="rs" style="margin-top:14px;display:none"></div>';
  $('go').onclick=function(){var b=this;b.innerHTML='<span class="spin"></span>در حال اسکن...';b.disabled=true;
-  api('POST','/api/scan',{sni:$('sn').value,count:+$('sc').value}).then(function(r){b.textContent='شروع اسکن';b.disabled=false;var el=$('rs');el.style.display='block';
+  api('POST','/api/scan',{sni:$('sn').value,count:+$('sc').value}).then(function(r){b.textContent='شروع اسکن';b.disabled=false;var el=$('rs');if(!el||TAB!=='scan')return;el.style.display='block';
    el.innerHTML='<h3><span>Results</span><span>'+r.ok+' / '+r.tested+'</span></h3>'+(r.list.length?r.list.map(function(x){return '<div class="res"><code>'+x.ip+'</code><span class="ms '+(x.ms<250?'g':x.ms<600?'y':'r')+'">'+x.ms+' ms</span><span style="display:flex;gap:6px"><button class="sm" data-c="'+x.ip+'">کپی</button><button class="sm p" data-u="'+x.ip+'">استفاده</button></span></div>'}).join(''):'<div class="empty">آی‌پی سالمی پیدا نشد</div>');
    el.onclick=function(e){var c=e.target.closest('[data-c]'),u=e.target.closest('[data-u]');if(c)cp(c.dataset.c);if(u)api('POST','/api/settings',{addr:u.dataset.u}).then(function(){toast('آدرس پیش‌فرض ست شد');loadState(1)})}}).catch(function(){b.textContent='شروع اسکن';b.disabled=false})}}
 /* ---------- locations (multi-location via SOCKS) ---------- */
@@ -150,6 +158,7 @@ function vLoc(v){v.innerHTML='<div class="sec"><h2>لوکیشن‌ها 🌍</h2>
  '<div class="card" style="margin-top:14px"><h3><span>منابع پروکسی 🌐</span></h3><p class="hint2">از این لیست‌ها پروکسی برداشته می‌شه؛ پروتکل (SOCKS5/HTTP) خودکار تشخیص داده می‌شه و فقط سالم‌ها با پرچم کشورشون اضافه می‌شن. پروکسی رایگان مطمئن نیست و کند/قطع می‌شه — برای کیفیت، پروکسی اختصاصی بخر و دستی اضافه کن.</p><div id="src"></div><div class="row2" style="margin-top:8px"><div><span class="lab">سورس جدید (فایل متنی socks5)</span><input id="nsrc" placeholder="https://..." style="direction:ltr;text-align:left"></div><div style="display:flex;align-items:flex-end"><button class="btn" id="asrc">افزودن سورس</button></div></div><div class="row2" style="margin-top:8px"><div><span class="lab">حداکثر اضافه</span><select id="fmax"><option>5</option><option selected>10</option><option>20</option><option>30</option></select></div><div style="display:flex;align-items:flex-end"><button class="btn" id="goFetch">دریافت و تست ⚡</button></div></div><div id="fres" style="margin-top:10px"></div></div>';
  loadLoc()}
 function loadLoc(){api('GET','/api/locs').then(function(r){
+ if(!$('eg')||TAB!=='loc')return;
  $('locn').textContent=(r.locs||[]).length+' لوکیشن';
  var hh=r.health||{};$('lhSw').className='sw'+(hh.on!==false?' on':'');$('lhMin').value=hh.everyMin||30;
  $('lhKhi').textContent=hh.checkedAt?('آخرین چک: '+new Date(hh.checkedAt).toLocaleTimeString('fa-IR')):'هنوز چکی نشده';
@@ -213,7 +222,7 @@ function vSet(v){v.innerHTML='<div class="sec"><h2>تنظیمات</h2></div><div
  $('btest').onclick=function(){var b=this;b.innerHTML='<span class="spin"></span>';api('POST','/api/settings',{botUser:$('bu').value,botToken:$('bt').value}).then(function(){return api('GET','/api/bot/test')}).then(function(r){toast('ربات وصله: @'+r.bot.username);loadState(1)}).catch(function(){b.textContent='تست اتصال'})};
  $('sca').onclick=function(){this.classList.toggle('on')};
  $('ssc').onclick=function(){api('POST','/api/settings',{scanAuto:$('sca').classList.contains('on'),scanEveryH:+$('seh').value||12}).then(function(){toast('ذخیره شد');loadState(1)})};
- api('GET','/api/security').then(function(r){$('secc').textContent=r.log.length+' مورد';$('secl').innerHTML=r.log.length?r.log.slice(0,12).map(function(x){return '<div class="res"><code style="direction:ltr">'+esc(x.ip)+'</code><span class="ms '+(x.ok?'g':'r')+'">'+(x.ok?'موفق':'ناموفق')+'</span><span style="color:var(--mu);font-size:11px">'+new Date(x.t).toLocaleString('fa-IR')+'</span></div>'}).join(''):'<div class="empty">لاگی نیست</div>'}).catch(function(){var e=$('secl');if(e)e.innerHTML='<div class="empty">خطا</div>'});
+ api('GET','/api/security').then(function(r){if(!$('secl')||TAB!=='set')return;$('secc').textContent=r.log.length+' مورد';$('secl').innerHTML=r.log.length?r.log.slice(0,12).map(function(x){return '<div class="res"><code style="direction:ltr">'+esc(x.ip)+'</code><span class="ms '+(x.ok?'g':'r')+'">'+(x.ok?'موفق':'ناموفق')+'</span><span style="color:var(--mu);font-size:11px">'+new Date(x.t).toLocaleString('fa-IR')+'</span></div>'}).join(''):'<div class="empty">لاگی نیست</div>'}).catch(function(){var e=$('secl');if(e)e.innerHTML='<div class="empty">خطا</div>'});
  $('bkd').onclick=function(){api('GET','/api/backup').then(function(r){var b=new Blob([JSON.stringify(r.db)],{type:'application/json'});var a=document.createElement('a');a.href=URL.createObjectURL(b);a.download='batamn-backup-'+new Date().toISOString().slice(0,10)+'.json';document.body.appendChild(a);a.click();setTimeout(function(){URL.revokeObjectURL(a.href);a.remove()},800)})};
  $('bkr').onclick=function(){$('bkf').click()};
  $('bkf').onchange=function(){var f=this.files[0];if(!f)return;var rd=new FileReader();rd.onload=function(){try{var j=JSON.parse(rd.result);ask('بازیابی انجام بشه؟ اطلاعات فعلی جایگزین می‌شه.',function(){api('POST','/api/restore',{db:j}).then(function(r){toast(r.n+' کاربر برگشت');loadState()})})}catch(e){toast('فایل معتبر نیست')}};rd.readAsText(f);this.value=''};

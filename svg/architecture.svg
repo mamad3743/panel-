@@ -1,0 +1,38 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="360" viewBox="0 0 1200 360">
+  <rect width="1200" height="360" fill="#04060a"/>
+  <g font-family="Segoe UI,Tahoma,Arial,sans-serif" text-anchor="middle">
+    <rect x="30" y="120" width="180" height="120" rx="18" fill="#0b1120" stroke="#5b9bff" stroke-opacity=".45" stroke-width="2"/>
+    <text x="120" y="168" font-size="38">📲</text>
+    <text x="120" y="200" font-size="18" font-weight="700" fill="#eaf1ff">Clients</text>
+    <text x="120" y="222" font-size="13" fill="#8fa3c4">v2rayNG / Hiddify / Streisand</text>
+    <rect x="270" y="120" width="200" height="120" rx="18" fill="#0b1120" stroke="#5b9bff" stroke-opacity=".45" stroke-width="2"/>
+    <text x="370" y="168" font-size="38">🦇</text>
+    <text x="370" y="200" font-size="18" font-weight="700" fill="#eaf1ff">BATAMN :8080</text>
+    <text x="370" y="222" font-size="13" fill="#8fa3c4">Panel + WS bridge</text>
+    <rect x="530" y="120" width="200" height="120" rx="18" fill="#0b1120" stroke="#5b9bff" stroke-opacity=".45" stroke-width="2"/>
+    <text x="630" y="168" font-size="38">⚙️</text>
+    <text x="630" y="200" font-size="18" font-weight="700" fill="#eaf1ff">Xray-core</text>
+    <text x="630" y="222" font-size="13" fill="#8fa3c4">VLESS / VMess / Trojan</text>
+    <rect x="790" y="40" width="180" height="110" rx="18" fill="#0b1120" stroke="#4fd1a0" stroke-opacity=".5" stroke-width="2"/>
+    <text x="880" y="84" font-size="30">🚀</text>
+    <text x="880" y="112" font-size="17" font-weight="700" fill="#eaf1ff">Direct</text>
+    <text x="880" y="132" font-size="13" fill="#8fa3c4">freedom egress</text>
+    <rect x="790" y="210" width="180" height="110" rx="18" fill="#0b1120" stroke="#4fd1a0" stroke-opacity=".5" stroke-width="2"/>
+    <text x="880" y="254" font-size="30">🌍</text>
+    <text x="880" y="282" font-size="17" font-weight="700" fill="#eaf1ff">Locations</text>
+    <text x="880" y="302" font-size="13" fill="#8fa3c4">SOCKS5 / HTTP egress</text>
+    <rect x="1030" y="120" width="140" height="120" rx="18" fill="#0b1120" stroke="#e8b34a" stroke-opacity=".5" stroke-width="2"/>
+    <text x="1100" y="175" font-size="38">🌐</text>
+    <text x="1100" y="210" font-size="17" font-weight="700" fill="#eaf1ff">Internet</text>
+    <g stroke="#5b9bff" stroke-width="2.5" fill="none">
+      <line x1="210" y1="180" x2="266" y2="180"/><polygon points="266,180 256,174 256,186" fill="#5b9bff"/>
+      <line x1="470" y1="180" x2="526" y2="180"/><polygon points="526,180 516,174 516,186" fill="#5b9bff"/>
+      <line x1="730" y1="160" x2="786" y2="100"/><polygon points="786,100 775,102 780,111" fill="#4fd1a0"/>
+      <line x1="730" y1="200" x2="786" y2="260"/><polygon points="786,260 780,249 775,258" fill="#4fd1a0"/>
+      <line x1="970" y1="95" x2="1026" y2="150"/><polygon points="1026,150 1015,148 1020,139" fill="#e8b34a"/>
+      <line x1="970" y1="265" x2="1026" y2="210"/><polygon points="1026,210 1020,221 1015,212" fill="#e8b34a"/>
+    </g>
+    <text x="240" y="168" font-size="12" fill="#8fa3c4">wss :443</text>
+    <text x="500" y="168" font-size="12" fill="#8fa3c4">127.0.0.1</text>
+  </g>
+</svg>

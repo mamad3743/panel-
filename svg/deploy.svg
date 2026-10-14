@@ -1,0 +1,30 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="240" viewBox="0 0 1200 240">
+  <rect width="1200" height="240" fill="#04060a"/>
+  <g font-family="Segoe UI,Tahoma,Arial,sans-serif" text-anchor="middle">
+    <g>
+      <rect x="30" y="60" width="250" height="120" rx="18" fill="#0b1120" stroke="#5b9bff" stroke-opacity=".45" stroke-width="2"/>
+      <text x="155" y="112" font-size="34">🍴</text>
+      <text x="155" y="145" font-size="18" font-weight="700" fill="#eaf1ff">1. Fork repo</text>
+    </g>
+    <g>
+      <rect x="320" y="60" width="250" height="120" rx="18" fill="#0b1120" stroke="#5b9bff" stroke-opacity=".45" stroke-width="2"/>
+      <text x="445" y="112" font-size="34">🚂</text>
+      <text x="445" y="145" font-size="18" font-weight="700" fill="#eaf1ff">2. Railway deploy</text>
+    </g>
+    <g>
+      <rect x="610" y="60" width="250" height="120" rx="18" fill="#0b1120" stroke="#5b9bff" stroke-opacity=".45" stroke-width="2"/>
+      <text x="735" y="112" font-size="34">🔑</text>
+      <text x="735" y="145" font-size="18" font-weight="700" fill="#eaf1ff">3. ADMIN_PASS</text>
+    </g>
+    <g>
+      <rect x="900" y="60" width="250" height="120" rx="18" fill="#0b1120" stroke="#4fd1a0" stroke-opacity=".5" stroke-width="2"/>
+      <text x="1025" y="112" font-size="34">🌐</text>
+      <text x="1025" y="145" font-size="18" font-weight="700" fill="#eaf1ff">4. Domain + open</text>
+    </g>
+    <g stroke="#5b9bff" stroke-width="2.5">
+      <line x1="280" y1="120" x2="316" y2="120"/><polygon points="316,120 306,114 306,126" fill="#5b9bff"/>
+      <line x1="570" y1="120" x2="606" y2="120"/><polygon points="606,120 596,114 596,126" fill="#5b9bff"/>
+      <line x1="860" y1="120" x2="896" y2="120"/><polygon points="896,120 886,114 886,126" fill="#5b9bff"/>
+    </g>
+  </g>
+</svg>

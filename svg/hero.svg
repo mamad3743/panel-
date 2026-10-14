@@ -1,0 +1,35 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="420" viewBox="0 0 1200 420">
+  <defs>
+    <radialGradient id="o1" cx=".5" cy=".5" r=".5">
+      <stop offset="0" stop-color="#2f5fc4" stop-opacity=".55"/><stop offset="1" stop-color="#2f5fc4" stop-opacity="0"/>
+    </radialGradient>
+    <radialGradient id="o2" cx=".5" cy=".5" r=".5">
+      <stop offset="0" stop-color="#5b9bff" stop-opacity=".35"/><stop offset="1" stop-color="#5b9bff" stop-opacity="0"/>
+    </radialGradient>
+    <linearGradient id="ac" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#7db2ff"/><stop offset="1" stop-color="#2f5fc4"/>
+    </linearGradient>
+    <pattern id="grid" width="44" height="44" patternUnits="userSpaceOnUse">
+      <path d="M44 0H0V44" fill="none" stroke="#82aae6" stroke-opacity=".08"/>
+    </pattern>
+  </defs>
+  <rect width="1200" height="420" fill="#04060a"/>
+  <rect width="1200" height="420" fill="url(#grid)"/>
+  <ellipse cx="250" cy="60" rx="330" ry="200" fill="url(#o1)"/>
+  <ellipse cx="980" cy="380" rx="330" ry="190" fill="url(#o2)"/>
+  <g transform="translate(600,130) scale(1.5)">
+    <path d="M0-32L4-46L8-33L16-34C40-44 72-40 96-18C84-18 76-12 72 0C64-8 52-8 46 2C40-4 32-2 28 8C24 2 16 4 12 16L6 8L0 20L-6 8L-12 16C-16 4-24 2-28 8C-32-2-40-4-46 2C-52-8-64-8-72 0C-76-12-84-18-96-18C-72-40-40-44-16-34L-8-33L-4-46L0-32Z" fill="url(#ac)"/>
+  </g>
+  <text x="600" y="255" text-anchor="middle" font-family="Segoe UI,Tahoma,Arial,sans-serif" font-size="72" font-weight="700" letter-spacing="26" fill="#eaf1ff">BATAMN</text>
+  <text x="600" y="300" text-anchor="middle" font-family="Segoe UI,Tahoma,Arial,sans-serif" font-size="22" letter-spacing="3" fill="#8fa3c4">Multi-location Xray panel &#183; Subscriptions &#183; Scanner &#183; Telegram bot</text>
+  <g font-family="Segoe UI,Tahoma,Arial,sans-serif" font-size="17" font-weight="600">
+    <rect x="270" y="330" width="150" height="44" rx="22" fill="#5b9bff" fill-opacity=".14" stroke="#5b9bff" stroke-opacity=".5"/>
+    <text x="345" y="358" text-anchor="middle" fill="#7db2ff">Node.js 20</text>
+    <rect x="432" y="330" width="130" height="44" rx="22" fill="#5b9bff" fill-opacity=".14" stroke="#5b9bff" stroke-opacity=".5"/>
+    <text x="497" y="358" text-anchor="middle" fill="#7db2ff">Xray-core</text>
+    <rect x="574" y="330" width="170" height="44" rx="22" fill="#5b9bff" fill-opacity=".14" stroke="#5b9bff" stroke-opacity=".5"/>
+    <text x="659" y="358" text-anchor="middle" fill="#7db2ff">Railway Ready</text>
+    <rect x="756" y="330" width="170" height="44" rx="22" fill="#5b9bff" fill-opacity=".14" stroke="#5b9bff" stroke-opacity=".5"/>
+    <text x="841" y="358" text-anchor="middle" fill="#7db2ff">FA &#183; EN</text>
+  </g>
+</svg>
