@@ -71,7 +71,7 @@ function enforce(){const now=Date.now();let ch=false;
   if(ch)restartSoon()}
 const blockRules=()=>[...blocks.values()].map(b=>({type:'field',user:[b.uid],source:[b.rule],outboundTag:'block'}));
 function onlineSummary(){let devs=0,us=0;const per={},list=[];
-  for(const u of db.users){const o=onlineOf(u.id);if(o.length){us++;devs+=o.length;per[u.id]=o.length;list.push({name:u.name,ips:o.map(e=>e.ip),max:u.maxDev||0})}}
+  for(const u of db.users){const o=onlineOf(u.id);if(o.length){us++;devs+=o.length;per[u.id]=o.length;list.push({id:u.id,name:u.name,ips:o.map(e=>e.ip),max:u.maxDev||0})}}
   return{users:us,devices:devs,per,list:list.slice(0,30),track:Date.now()-ipSeen<600000}}
 setInterval(tailAcc,3000);setInterval(enforce,10000);
 
@@ -149,6 +149,35 @@ process.on('exit',()=>{try{xray&&xray.kill()}catch(e){}});
 setInterval(async()=>{if(!db.settings.auto||updating||Date.now()-lastApply<600000)return;
   try{const L=await latest(),cur=curVersion();if(L.sha!==cur.sha){console.log('[update] installing',L.sha.slice(0,7));await applyUpdate();restartApp()}}catch(e){console.log('[update]',e.message)}},30*60*1000);
 
+// ---------- auto clean-IP rotation ----------
+let lastScan=0;
+setInterval(async()=>{
+  if(!db.settings.scanAuto||!CF.length)return;
+  const everyH=Math.max(1,Math.min(72,+db.settings.scanEveryH||12));
+  if(Date.now()-lastScan<everyH*3600e3)return;lastScan=Date.now();
+  try{const r=await scan('speed.cloudflare.com',60);
+    if(r.list.length&&r.list[0].ip!==db.settings.addr){db.settings.addr=r.list[0].ip;save();console.log('[scan-auto] addr ->',r.list[0].ip,r.list[0].ms+'ms')}}
+  catch(e){console.log('[scan-auto]',e.message)}
+},10*60*1000);
+
+// ---------- telegram bot (minimal: /start <id-prefix> shows user status) ----------
+let botOff=0,botBusy=false;
+async function botCall(m,args){const r=await fetch('https://api.telegram.org/bot'+db.settings.botToken+'/'+m,{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify(args),signal:AbortSignal.timeout(20000)});return r.json()}
+setInterval(async()=>{
+  if(!db.settings.botToken||botBusy)return;botBusy=true;
+  try{
+    const u=await botCall('getUpdates',{offset:botOff,timeout:0,allowed_updates:['message']});
+    if(u.ok)for(const x of u.result||[]){botOff=x.update_id+1;
+      const msg=x.message||{};const txt=String(msg.text||'').trim();const cid=msg.chat&&msg.chat.id;
+      if(!cid||!txt.startsWith('/start'))continue;
+      const q=txt.split(/\s+/)[1]||'';
+      const user=db.users.find(v=>v.id===q||v.id.startsWith(q));
+      const t=user?('📊 اشتراک '+user.name+'\nوضعیت: '+status(user)+'\nمصرف: '+Math.round(user.used/1048576)+'MB / '+(user.limit?Math.round(user.limit/1073741824)+'GB':'∞')+(user.exp?'\nانقضا: '+new Date(user.exp).toLocaleDateString('fa-IR'):'')):'سلام! آیدی اشتراکت رو بعد از /start بفرست.\nمثال: /start a1b2c3d4';
+      await botCall('sendMessage',{chat_id:cid,text:t}).catch(()=>{});
+    }
+  }catch(e){}botBusy=false;
+},6000);
+
 // ---------- links ----------
 const cleanAddr=a=>a&&/^[\w.\-:\[\]]{1,100}$/.test(a)?a:'';
 function linksFor(u,h,addr){
@@ -214,6 +243,7 @@ const mkToken=()=>{const e=Date.now()+30*864e5;return e+'.'+sign(e)};
 const authed=req=>{const c=(req.headers.cookie||'').split(/;\s*/).find(x=>x.startsWith('bt='));if(!c)return false;
   const[e,s]=c.slice(3).split('.');return !!s&&+e>Date.now()&&crypto.timingSafeEqual(Buffer.from(sign(e)),Buffer.from(s.padEnd(64,'x').slice(0,64)))};
 const fails={};
+const secLog=[];const secPush=(ip,ok)=>{secLog.unshift({ip,t:Date.now(),ok:!!ok});if(secLog.length>60)secLog.length=60};
 const clientIp=req=>{const x=String(req.headers['x-forwarded-for']||'').split(',').map(v=>v.trim()).filter(Boolean);return String(x[0]||req.headers['x-real-ip']||req.socket.remoteAddress||'').replace(/^::ffff:/,'')};
 // speed-test helpers (only for known active users or the logged-in admin)
 const SPBUF=crypto.randomBytes(65536),spQ={};
@@ -251,6 +281,9 @@ http.createServer(async(req,res)=>{
     res.writeHead(404);return res.end()}
   const lv=/^\/sub\/([^/]+)\/live$/.exec(u);
   if(lv){const x=db.users.find(v=>v.id===lv[1]);if(!x)return J(res,{e:1},404);return J(res,{online:onlineOf(x.id).length,max:x.maxDev||0,status:status(x)})}
+  const mf=/^\/sub\/([^/]+)\/manifest$/.exec(u);
+  if(mf){const x=db.users.find(v=>v.id===mf[1]);if(!x)return J(res,{e:1},404);
+    return J(res,{name:'BATAMN · '+x.name,short_name:'BATAMN',start_url:'/sub/'+x.id,scope:'/sub/'+x.id,display:'standalone',dir:'rtl',lang:'fa',background_color:'#04060a',theme_color:'#04060a',icons:[{src:'/bg.svg',sizes:'any',type:'image/svg+xml',purpose:'any'}]})}
   if(u.startsWith('/sub/')){
     const x=db.users.find(v=>v.id===u.slice(5)),html=(req.headers.accept||'').includes('text/html')&&!U.searchParams.has('raw');
     if(!x){res.writeHead(404,{'content-type':'text/plain'});return res.end('Not found')}
@@ -262,7 +295,8 @@ http.createServer(async(req,res)=>{
       return res.end(Buffer.from(L.map(i=>i.l).join('\n')).toString('base64'));
     }
     const subUrl='https://'+hh+'/sub/'+x.id+(addr?'?addr='+encodeURIComponent(addr):'');
-    const data={id:x.id,online:onlineOf(x.id).length,maxDev:x.maxDev||0,contact:contact(),sub:subUrl,host:hh,status:st,used:x.used,limit:x.limit,exp:x.exp,created:x.created,days:dates14().map(d=>((x.days||{})[d]||0)),links:L.map(i=>({n:i.n,l:i.l,qr:qrSvg(i.l)}))};
+    const fb=cleanHost(db.settings.fallback)||'';
+    const data={id:x.id,online:onlineOf(x.id).length,maxDev:x.maxDev||0,contact:contact(),sub:subUrl,host:hh,fallback:fb,altSub:fb?'https://'+fb+'/sub/'+x.id+(addr?'?addr='+encodeURIComponent(addr):''):null,pay:{card:String(db.settings.payCard||'').slice(0,32),url:String(db.settings.payUrl||'').slice(0,200)},bot:cleanTg(db.settings.botUser||''),status:st,used:x.used,limit:x.limit,exp:x.exp,created:x.created,days:dates14().map(d=>((x.days||{})[d]||0)),links:L.map(i=>({n:i.n,l:i.l,qr:qrSvg(i.l)}))};
     const page=SUB.replace('__THEME__',db.settings.theme||'knight').replace(/__NAME__/g,()=>esc(x.name)).replace('__QR__',()=>st==='active'?qrSvg(subUrl):'').replace('__DATA__',()=>JSON.stringify(data).replace(/</g,'\\u003c'));
     return res.writeHead(200,{'content-type':'text/html; charset=utf-8','cache-control':'no-store'}),res.end(page);
   }
@@ -271,8 +305,8 @@ http.createServer(async(req,res)=>{
     if(Date.now()-f.t>600000){f.n=0;f.t=Date.now()}
     if(f.n>=8)return J(res,{e:'تلاش زیاد. بعداً امتحان کن'},429);
     const b=await body(req);
-    if(typeof b.pass==='string'&&b.pass===db.settings.pass){delete fails[ip];res.setHeader('Set-Cookie',sessCookie(req,mkToken()));return J(res,{ok:1})}
-    f.n++;fails[ip]=f;return J(res,{e:'رمز اشتباهه'},401);
+    if(typeof b.pass==='string'&&b.pass===db.settings.pass){delete fails[ip];secPush(ip,1);res.setHeader('Set-Cookie',sessCookie(req,mkToken()));return J(res,{ok:1})}
+    f.n++;fails[ip]=f;secPush(ip,0);return J(res,{e:'رمز اشتباهه'},401);
   }
   if(u==='/api/logout'){res.setHeader('Set-Cookie','bt=; Path=/; Max-Age=0; SameSite=Lax'+(isSecure(req)?'; Secure':''));return J(res,{ok:1})}
   if(u.startsWith('/api/')){
@@ -282,10 +316,25 @@ http.createServer(async(req,res)=>{
       pup:process.uptime(),load:os.loadavg(),conns,online:onlineSummary(),region:process.env.RAILWAY_REPLICA_REGION||process.env.RAILWAY_REGION||'—',
       xray:{on:!!(xray&&xray.exitCode===null),mem:xrayMem()}});
     if(u==='/api/state'){
-      const D=dates14(),hh=effHost(req,h);return J(res,{host:hh,realHost:h,settings:{addr:db.settings.addr,host:db.settings.host||'',theme:db.settings.theme||'knight',...contact(),...repoCfg(),auto:!!db.settings.auto,hasToken:!!db.settings.token},version:curVersion(),inbounds:db.inbounds,daily:{dates:D,total:D.map(d=>(db.daily||{})[d]||0)},
+      const D=dates14(),hh=effHost(req,h);return J(res,{host:hh,realHost:h,settings:{addr:db.settings.addr,host:db.settings.host||'',fallback:db.settings.fallback||'',theme:db.settings.theme||'knight',plans:Array.isArray(db.settings.plans)?db.settings.plans:[],payCard:db.settings.payCard||'',payUrl:db.settings.payUrl||'',botUser:db.settings.botUser||'',hasBotToken:!!db.settings.botToken,scanAuto:!!db.settings.scanAuto,scanEveryH:Math.max(1,Math.min(72,+db.settings.scanEveryH||12)),...contact(),...repoCfg(),auto:!!db.settings.auto,hasToken:!!db.settings.token},version:curVersion(),inbounds:db.inbounds,daily:{dates:D,total:D.map(d=>(db.daily||{})[d]||0)},
         users:db.users.map(x=>pubUser(x,hh,addr,true)),totalUsed:db.users.reduce((a,x)=>a+x.used,0)});
     }
+    if(u==='/api/backup')return J(res,{ok:1,at:Date.now(),db});
+    if(u==='/api/security')return J(res,{log:secLog,banned:Object.keys(fails).filter(k=>(fails[k].n>=8))});
+    if(u==='/api/bot/test'){try{const r=await fetch('https://api.telegram.org/bot'+db.settings.botToken+'/getMe',{signal:AbortSignal.timeout(15000)});const j=await r.json();if(!j.ok)throw new Error('توکن نامعتبره');return J(res,{ok:1,bot:j.result})}catch(e){return J(res,{e:'اتصال به تلگرام ناموفق بود'},502)}}
     const b=await body(req);
+    if(u==='/api/restore'){const d=b.db||b;if(!d||!Array.isArray(d.users)||!Array.isArray(d.inbounds))return J(res,{e:'فایل بکاپ معتبر نیست'},400);
+      db.users=d.users.filter(x=>x&&x.id).slice(0,5000);db.inbounds=d.inbounds.filter(x=>x&&x.id&&x.path).slice(0,50);if(d.settings&&typeof d.settings==='object')Object.assign(db.settings,d.settings);
+      save();restartSoon();return J(res,{ok:1,n:db.users.length})}
+    if(u==='/api/users/bulk'){const ids=new Set(Array.isArray(b.ids)?b.ids:[]);if(!ids.size)return J(res,{e:'کاربری انتخاب نشده'},400);
+      if(b.action==='delete'){db.users=db.users.filter(x=>!ids.has(x.id))}
+      else if(b.action==='reset'){db.users.forEach(x=>{if(ids.has(x.id))x.used=0})}
+      else if(b.action==='extend'){const d=Math.max(1,Math.min(3650,Math.floor(+b.days||0)));if(!d)return J(res,{e:'روز نامعتبره'},400);const now=Date.now();db.users.forEach(x=>{if(ids.has(x.id))x.exp=Math.max(now,x.exp||0)+d*864e5})}
+      else return J(res,{e:'نامعتبر'},400);
+      save();restartSoon();return J(res,{ok:1})}
+    if(u==='/api/user/kick'){const x=db.users.find(v=>v.id===b.id);if(!x)return J(res,{e:1},404);
+      const rule=String(b.rule||'').slice(0,64);if(!rule)return J(res,{e:'IP نامعتبره'},400);
+      blocks.set(x.id+'|'+rule,{uid:x.id,rule,exp:Date.now()+30*60000});restartSoon();return J(res,{ok:1})}
     if(u==='/api/users'){db.users.push({id:crypto.randomUUID(),name:cleanName(b.name),on:true,created:Date.now(),
         limit:Math.max(0,+b.gb||0)*GB,exp:b.days>0?Date.now()+b.days*864e5:0,used:0,maxDev:Math.max(0,Math.floor(+b.maxDev||0)),note:String(b.note||'').slice(0,100)});save();restartSoon();return J(res,{ok:1})}
     if(u==='/api/user/update'){const x=db.users.find(v=>v.id===b.id);if(!x)return J(res,{e:1},404);
@@ -304,7 +353,7 @@ http.createServer(async(req,res)=>{
       if(b.on!=null)i.on=!!b.on;if(b.name)i.name=String(b.name).slice(0,30);save();restartSoon();return J(res,{ok:1})}
     if(u==='/api/inbound/del'){if(db.inbounds.length<=1)return J(res,{e:'حداقل یک اینباند لازمه'},400);db.inbounds=db.inbounds.filter(v=>v.id!==b.id);save();restartSoon();return J(res,{ok:1})}
     if(u==='/api/settings'){
-      if(['knight','gotham','joker'].includes(b.theme))db.settings.theme=b.theme;
+      if(['knight','gotham','joker','light'].includes(b.theme))db.settings.theme=b.theme;
       if(b.repo!=null){const v=String(b.repo).trim().replace(/^https?:\/\/github\.com\//,'').replace(/\.git$/,'').replace(/\/$/,'');if(v&&!/^[\w.-]+\/[\w.-]+$/.test(v))return J(res,{e:'ریپو باید به شکل owner/repo باشه'},400);db.settings.repo=v}
       if(b.branch!=null){const v=String(b.branch).trim();if(v&&!/^[\w./-]{1,60}$/.test(v))return J(res,{e:'برنچ نامعتبره'},400);db.settings.branch=v}
       if(b.token)db.settings.token=String(b.token).trim().slice(0,200);if(b.clearToken)delete db.settings.token;
@@ -312,6 +361,14 @@ http.createServer(async(req,res)=>{
       if(b.support!=null)db.settings.support=cleanTg(b.support);if(b.channel!=null)db.settings.channel=cleanTg(b.channel);
       if(b.addr!=null)db.settings.addr=cleanAddr(String(b.addr).trim());
       if(b.host!=null){const v=String(b.host).trim().toLowerCase().replace(/^https?:\/\//,'').split('/')[0];if(v&&!/^[a-z0-9.-]{3,253}$/.test(v))return J(res,{e:'دامنه نامعتبره (مثل sub.example.com)'},400);db.settings.host=v?cleanHost(v):'';}
+      if(b.fallback!=null){const v=String(b.fallback).trim().toLowerCase().replace(/^https?:\/\//,'').split('/')[0];if(v&&!/^[a-z0-9.-]{3,253}$/.test(v))return J(res,{e:'دامنه جایگزین نامعتبره'},400);db.settings.fallback=v?cleanHost(v):'';}
+      if(b.plans!=null){if(!Array.isArray(b.plans))return J(res,{e:'پلن نامعتبره'},400);db.settings.plans=b.plans.filter(p=>p&&p.name).slice(0,20).map(p=>({name:String(p.name).slice(0,30),gb:Math.max(0,+p.gb||0),days:Math.max(0,Math.floor(+p.days||0)),maxDev:Math.max(0,Math.floor(+p.maxDev||0))}));}
+      if(b.payCard!=null)db.settings.payCard=String(b.payCard).replace(/[^\d\s-]/g,'').slice(0,32);
+      if(b.payUrl!=null){const v=String(b.payUrl).trim().slice(0,200);if(v&&!/^https?:\/\/.{4,}$/.test(v))return J(res,{e:'لینک پرداخت باید با http شروع بشه'},400);db.settings.payUrl=v}
+      if(b.botUser!=null)db.settings.botUser=cleanTg(b.botUser);
+      if(b.botToken)db.settings.botToken=String(b.botToken).trim().slice(0,120);if(b.clearBotToken)delete db.settings.botToken;
+      if(b.scanAuto!=null)db.settings.scanAuto=!!b.scanAuto;
+      if(b.scanEveryH!=null)db.settings.scanEveryH=Math.max(1,Math.min(72,Math.floor(+b.scanEveryH||12)));
       if(b.pass){if(String(b.pass).length<6)return J(res,{e:'رمز حداقل ۶ کاراکتر'},400);db.settings.pass=String(b.pass);db.secret=crypto.randomBytes(24).toString('hex');
         res.setHeader('Set-Cookie',sessCookie(req,mkToken()))}
       save();return J(res,{ok:1})}

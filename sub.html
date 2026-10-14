@@ -1,6 +1,8 @@
 <!doctype html><html lang="fa" dir="rtl" data-theme="__THEME__"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<meta name="theme-color" content="#04060a"><title>BATAMN · __NAME__</title>
+<meta name="theme-color" content="#04060a"><meta name="mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<link rel="apple-touch-icon" href="/bg.svg"><link rel="manifest" id="mf" href="">
+<title>BATAMN · __NAME__</title>
 <link rel="preload" href="/fonts/vazir.woff2" as="font" type="font/woff2" crossorigin><link rel="preload" href="/fonts/inter.woff2" as="font" type="font/woff2" crossorigin>
 <link rel="stylesheet" href="/style.css">
 <style>
@@ -10,8 +12,8 @@
 .nx-brand svg{width:44px;height:22px;filter:drop-shadow(0 0 12px rgba(var(--rgb),.55))}
 .nx-brand b{font-size:17px;letter-spacing:.42em;font-weight:700;background:linear-gradient(180deg,#fff,rgba(var(--rgb),.9));-webkit-background-clip:text;background-clip:text;color:transparent}
 .nx-top-l{display:flex;align-items:center;gap:8px}
-.nx-icobtn{width:34px;height:34px;border-radius:11px;border:1px solid var(--line);background:rgba(255,255,255,.04);color:var(--mu);cursor:pointer;font-size:16px;display:flex;align-items:center;justify-content:center;transition:.2s}
-.nx-icobtn:active{transform:scale(.92) rotate(-30deg)}
+.nx-icobtn{min-width:34px;height:34px;padding:0 8px;border-radius:11px;border:1px solid var(--line);background:rgba(255,255,255,.04);color:var(--mu);cursor:pointer;font-size:12px;font-family:var(--fm);display:flex;align-items:center;justify-content:center;transition:.2s}
+.nx-icobtn:active{transform:scale(.92)}
 .orb{position:fixed;border-radius:50%;filter:blur(90px);pointer-events:none;z-index:0;opacity:.5}
 .orb.o1{width:340px;height:340px;top:-110px;left:-90px;background:radial-gradient(circle,rgba(var(--rgb),.35),transparent 70%);animation:fl1 9s ease-in-out infinite}
 .orb.o2{width:300px;height:300px;bottom:-100px;right:-80px;background:radial-gradient(circle,rgba(var(--rgb),.22),transparent 70%);animation:fl1 11s ease-in-out infinite reverse}
@@ -66,8 +68,10 @@
 .nx-cf b{font-size:13.5px;display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .nx-cf small{color:var(--mu);font-size:10px;font-family:var(--fm);direction:ltr;display:block;margin-top:2px}
 .nx-proto{font-size:9px;font-weight:700;letter-spacing:1px;padding:3px 8px;border-radius:99px;background:rgba(var(--rgb),.12);color:var(--ac3);border:1px solid rgba(var(--rgb),.3);flex:none;font-family:var(--fm)}
+.nx-ms{font-family:var(--fm);font-size:10.5px;font-weight:700;direction:ltr;flex:none;min-width:64px;text-align:center;padding:4px 6px;border-radius:99px;border:1px solid var(--line);color:var(--mu)}
+.nx-ms.g{color:var(--ok);border-color:rgba(79,209,160,.4)}.nx-ms.y{color:var(--warn);border-color:rgba(232,179,74,.4)}.nx-ms.r{color:var(--bad);border-color:rgba(239,107,127,.4)}
 .nx-q{display:none;background:#fff;border-radius:14px;padding:8px;width:180px;height:180px;margin:4px auto 12px}
-.nx-q.o{display:block}.nx-q svg{width:100%;height:100%;display:block}
+.nx-q.o{display:block}.nx-q svg,.nx-q img{width:100%;height:100%;display:block}
 .nx-tabs{display:flex;gap:7px;margin-bottom:12px}
 .nx-tab{flex:1;padding:9px 4px;border-radius:11px;border:1px solid var(--line);background:transparent;color:var(--mu);font:inherit;font-size:12px;cursor:pointer;transition:.2s}
 .nx-tab.on{background:rgba(var(--rgb),.15);color:#fff;border-color:rgba(var(--rgb),.5)}
@@ -80,18 +84,21 @@
 .nx-qrm .box{background:var(--card);border:1px solid var(--line);border-radius:22px;padding:22px;width:min(92vw,340px);text-align:center;transform:scale(.92);transition:.25s}
 .nx-qrm.o .box{transform:none}
 .nx-qrm .qrw{background:#fff;border-radius:16px;padding:10px;width:220px;height:220px;margin:12px auto}
-.nx-qrm .qrw svg{width:100%;height:100%;display:block}
+.nx-qrm .qrw svg,.nx-qrm .qrw img{width:100%;height:100%;display:block}
 .nx-qrm h3{margin:0;font-size:14px}
 .nx-qrm p{color:var(--mu);font-size:11.5px;font-family:var(--fm);direction:ltr;word-break:break-all;margin:8px 0 0}
 .nx-qrm .row{display:flex;gap:8px;margin-top:14px}
 .nx-row2{display:flex;gap:8px}
 .nx-row2 .btn,.nx-row2 .sm{margin:0}
 .nx-upd{text-align:center;color:var(--mu);font-size:10.5px;margin-top:12px;font-family:var(--fm)}
+.nx-pay{display:flex;align-items:center;gap:12px;padding:13px 14px;border-radius:14px;border:1px dashed rgba(var(--rgb),.4);background:rgba(var(--rgb),.06);margin-top:10px;cursor:pointer}
+.nx-pay b{font-family:var(--fm);font-size:15px;direction:ltr;letter-spacing:1px}
+.nx-pay small{display:block;color:var(--mu);font-size:11px}
 </style></head><body><div class="bgimg"></div><div class="orb o1"></div><div class="orb o2"></div>
 <svg width="0" height="0" style="position:absolute"><defs><symbol id="bat" viewBox="0 0 200 100"><path d="M100 26L104 12L108 25L116 24C140 14 172 18 196 40C184 40 176 46 172 58C164 50 152 50 146 60C140 54 132 56 128 66C124 60 116 62 112 74L106 66L100 78L94 66L88 74C84 62 76 60 72 66C68 56 60 54 54 60C48 50 36 50 28 58C24 46 16 40 4 40C28 18 60 14 84 24L92 25L96 12L100 26Z"/></symbol></defs></svg>
 <div class="wrap nx sp">
   <div class="nx-top"><div class="nx-brand"><svg class="emb" viewBox="0 0 200 100"><use href="#bat"/></svg><b>BATAMN</b></div>
-    <div class="nx-top-l"><span class="pill" id="stp"><i></i><span></span></span><button class="nx-icobtn" id="rf" title="بروزرسانی">↻</button></div></div>
+    <div class="nx-top-l"><span class="pill" id="stp"><i></i><span></span></span><button class="nx-icobtn" id="lng">EN</button><button class="nx-icobtn" id="rf" title="refresh">↻</button></div></div>
 
   <div class="card nx-hero" id="hero">
     <div id="deadBox"></div>
@@ -101,152 +108,197 @@
         <circle cx="88" cy="88" r="76" fill="none" stroke="rgba(255,255,255,.07)" stroke-width="9"/><circle id="rp" cx="88" cy="88" r="76" fill="none" stroke="url(#rg)" stroke-width="9" stroke-linecap="round" stroke-dasharray="0 478"/></svg>
         <div class="c"><b id="rn">—</b><small id="rl">USED</small></div></div>
       <h2 class="nx-name">__NAME__</h2>
-      <div class="nx-chips"><span class="nx-mchip" id="idchip" title="کپی آیدی"></span><span class="nx-mchip" id="hostline"></span></div>
+      <div class="nx-chips"><span class="nx-mchip" id="idchip" title="copy"></span><span class="nx-mchip" id="hostline"></span></div>
       <div class="nx-grid">
-        <div class="nx-t"><small>USED · مصرف</small><b id="t1">—</b></div>
-        <div class="nx-t"><small>REMAINING · باقی‌مانده</small><b id="t2">—</b></div>
-        <div class="nx-t"><small>TOTAL · حجم کل</small><b id="t3">—</b></div>
-        <div class="nx-t"><small>EXPIRES · انقضا</small><b id="t4">—</b><em id="t4d"></em></div>
-        <div class="nx-t hl"><small>AVG / DAY · میانگین روزانه</small><b id="t5">—</b></div>
-        <div class="nx-t hl"><small>FORECAST · پیش‌بینی اتمام</small><b id="t6">—</b></div>
-        <div class="nx-t wide"><small>DEVICES ONLINE · دستگاه‌های آنلاین</small><b id="dv">—</b><div class="nx-dots dots" id="dd"></div></div>
+        <div class="nx-t"><small data-i="used">USED · مصرف</small><b id="t1">—</b></div>
+        <div class="nx-t"><small data-i="rem">REMAINING · باقی‌مانده</small><b id="t2">—</b></div>
+        <div class="nx-t"><small data-i="tot">TOTAL · حجم کل</small><b id="t3">—</b></div>
+        <div class="nx-t"><small data-i="exp">EXPIRES · انقضا</small><b id="t4">—</b><em id="t4d"></em></div>
+        <div class="nx-t hl"><small data-i="avg">AVG / DAY · میانگین روزانه</small><b id="t5">—</b></div>
+        <div class="nx-t hl"><small data-i="fc">FORECAST · پیش‌بینی اتمام</small><b id="t6">—</b></div>
+        <div class="nx-t wide"><small data-i="dev">DEVICES ONLINE · دستگاه‌های آنلاین</small><b id="dv">—</b><div class="nx-dots dots" id="dd"></div></div>
       </div>
-      <div class="nx-meter"><div class="lr"><span>مصرف حجم</span><b id="pctTx">—</b></div><div class="nx-bar"><i id="bar"></i></div></div>
-      <div class="nx-meter" id="timeMeter"><div class="lr"><span>زمان باقی‌مانده</span><b id="tmTx">—</b></div><div class="nx-bar"><i id="barT"></i></div></div>
-      <div class="nx-meter"><div class="lr"><span>مصرف ۱۴ روز اخیر</span><b id="sumTx">—</b></div><div class="nx-chart" id="chart"></div><div class="nx-chart-lb"><span id="chS">—</span><span>امروز</span></div></div>
+      <div class="nx-meter"><div class="lr"><span data-i="mvol">مصرف حجم</span><b id="pctTx">—</b></div><div class="nx-bar"><i id="bar"></i></div></div>
+      <div class="nx-meter" id="timeMeter"><div class="lr"><span data-i="mtime">زمان باقی‌مانده</span><b id="tmTx">—</b></div><div class="nx-bar"><i id="barT"></i></div></div>
+      <div class="nx-meter"><div class="lr"><span data-i="m14">مصرف ۱۴ روز اخیر</span><b id="sumTx">—</b></div><div class="nx-chart" id="chart"></div><div class="nx-chart-lb"><span id="chS">—</span><span data-i="today">امروز</span></div></div>
     </div>
   </div>
 
-  <div class="card" id="act" style="margin-top:14px"><h3><span>Subscription · اشتراک</span><span id="copyHint"></span></h3>
-    <p class="hint">یه ضربه بزن کپی میشه. اشتراک هر ۱۲ ساعت خودکار آپدیت میشه.</p>
+  <div class="card" id="act" style="margin-top:14px"><h3><span data-i="subt">Subscription · اشتراک</span><span id="copyHint"></span></h3>
+    <p class="hint" data-i="subh">یه ضربه بزن کپی میشه. اشتراک هر ۱۲ ساعت خودکار آپدیت میشه.</p>
     <div class="nx-subbox" id="subbox">—</div>
-    <div class="nx-actions"><button class="btn" id="cs">کپی لینک اشتراک</button><button class="sm" id="qrbtn">QR اشتراک</button></div>
-    <div class="nx-actions" style="margin-top:8px"><button class="sm" id="shareBtn">اشتراک‌گذاری</button><button class="sm" id="dlBtn">دانلود کانفیگ‌ها</button></div>
+    <div class="nx-actions"><button class="btn" id="cs" data-i="copy">کپی لینک اشتراک</button><button class="sm" id="qrbtn" data-i="qr">QR اشتراک</button></div>
+    <div class="nx-actions" style="margin-top:8px"><button class="sm" id="shareBtn" data-i="share">اشتراک‌گذاری</button><button class="sm" id="dlBtn" data-i="dl">دانلود کانفیگ‌ها</button></div>
+    <div class="nx-actions" style="margin-top:8px;display:none" id="altWrap"><button class="sm" id="altBtn" style="grid-column:1/-1">🔀 <span id="altTx"></span></button></div>
     <div class="nx-apps" id="apps"></div>
   </div>
 
-  <div class="card" id="cc" style="margin-top:14px"><h3><span>Configs · کانفیگ‌ها</span><span id="ccn"></span></h3>
-    <div class="nx-cfg-tools"><input id="cfq" placeholder="جستجو..."><button class="sm p" id="copyAll">کپی همه</button></div>
-    <div class="nx-fch" id="fch"><button class="nx-fc on" data-p="all">همه</button><button class="nx-fc" data-p="vless">VLESS</button><button class="nx-fc" data-p="vmess">VMESS</button><button class="nx-fc" data-p="trojan">TROJAN</button></div>
+  <div class="card" id="cc" style="margin-top:14px"><h3><span data-i="cfgt">Configs · کانفیگ‌ها</span><span id="ccn"></span></h3>
+    <div class="nx-cfg-tools"><input id="cfq" data-ph="search" placeholder="جستجو..."><button class="sm p" id="copyAll" data-i="copyall">کپی همه</button></div>
+    <div class="nx-fch" id="fch"><button class="nx-fc on" data-p="all" data-i="all">همه</button><button class="nx-fc" data-p="vless">VLESS</button><button class="nx-fc" data-p="vmess">VMESS</button><button class="nx-fc" data-p="trojan">TROJAN</button></div>
+    <div class="nx-row2" style="margin-bottom:10px"><button class="sm" id="pingAll" data-i="pingall">تست تاخیر همه ⚡</button><button class="sm" id="sortPing" data-i="sort">مرتب‌سازی: سریع‌ها اول</button></div>
     <div id="cfs"></div>
   </div>
 
-  <div class="card" id="spc" style="margin-top:14px"><h3><span>Speed test · تست سرعت</span><span id="sst"></span></h3><div class="sp4"><div><small>PING</small><b id="s_p">—</b></div><div><small>JITTER</small><b id="s_j">—</b></div><div><small>DOWNLOAD</small><b id="s_d">—</b></div><div><small>UPLOAD</small><b id="s_u">—</b></div></div><button class="btn" id="s_go">شروع تست سرعت</button><div class="nx-row2" style="margin-top:8px"><button class="sm" id="pingBtn">تست سریع پینگ</button><button class="sm" id="connBtn">تست اتصال اشتراک</button></div><p class="hint" style="margin:12px 0 0">تست سرعت، اتصال اینترنت تو تا سرور رو نشون میده</p></div>
+  <div class="card" id="spc" style="margin-top:14px"><h3><span data-i="spdt">Speed test · تست سرعت</span><span id="sst"></span></h3><div class="sp4"><div><small>PING</small><b id="s_p">—</b></div><div><small>JITTER</small><b id="s_j">—</b></div><div><small>DOWNLOAD</small><b id="s_d">—</b></div><div><small>UPLOAD</small><b id="s_u">—</b></div></div><button class="btn" id="s_go" data-i="go">شروع تست سرعت</button><div class="nx-row2" style="margin-top:8px"><button class="sm" id="pingBtn" data-i="qping">تست سریع پینگ</button><button class="sm" id="connBtn" data-i="conn">تست اتصال اشتراک</button></div></div>
 
-  <div class="card" style="margin-top:14px"><h3><span>راهنمای اتصال</span></h3>
-    <div class="nx-tabs" id="gtabs"><button class="nx-tab on" data-g="and">اندروید</button><button class="nx-tab" data-g="ios">آیفون</button><button class="nx-tab" data-g="win">ویندوز</button></div>
+  <div class="card" style="margin-top:14px"><h3><span data-i="guidet">راهنمای اتصال</span></h3>
+    <div class="nx-tabs" id="gtabs"><button class="nx-tab on" data-g="and" data-i="and">اندروید</button><button class="nx-tab" data-g="ios" data-i="ios">آیفون</button><button class="nx-tab" data-g="win" data-i="win">ویندوز</button></div>
     <ol class="st" id="guide"></ol>
   </div>
 
-  <div class="card ct" id="ctc" style="margin-top:14px"><h3><span>پشتیبانی و تمدید</span></h3><div class="ctr" id="ctr" style="display:flex;gap:10px;flex-wrap:wrap"></div>
-    <div class="nx-actions" style="margin-top:10px"><button class="btn" id="renewBtn">درخواست تمدید</button></div></div>
+  <div class="card" id="payc" style="margin-top:14px;display:none"><h3><span data-i="payt">پرداخت و تمدید 💳</span></h3><div class="nx-pay" id="paybox"><div style="flex:1"><small data-i="cardn">شماره کارت (بزن کپی میشه)</small><b id="paycard"></b></div><span style="font-size:22px">💳</span></div><div class="nx-actions" style="margin-top:10px"><button class="btn" id="paylink" data-i="paygo" style="display:none">پرداخت آنلاین</button></div></div>
+
+  <div class="card ct" id="ctc" style="margin-top:14px"><h3><span data-i="supt">پشتیبانی و تمدید</span></h3><div class="ctr" id="ctr" style="display:flex;gap:10px;flex-wrap:wrap"></div>
+    <div class="nx-actions" style="margin-top:10px"><button class="btn" id="renewBtn" data-i="renew">درخواست تمدید</button></div></div>
 
   <div class="ft" id="ft">BATAMN</div>
   <div class="nx-upd" id="upd">—</div>
 </div>
 
-<div class="nx-qrm" id="qrm"><div class="box"><h3 id="qrmTitle">QR</h3><div class="qrw" id="qrmBox"></div><p id="qrmCap"></p><div class="row"><button class="sm p" id="qrmCopy" style="flex:1">کپی</button><button class="sm" id="qrmDl" style="flex:1">دانلود</button><button class="sm" id="qrmX">بستن</button></div></div></div>
+<div class="nx-qrm" id="qrm"><div class="box"><h3 id="qrmTitle">QR</h3><div class="qrw" id="qrmBox"></div><p id="qrmCap"></p><div class="row"><button class="sm p" id="qrmCopy" style="flex:1" data-i="copy2">کپی</button><button class="sm" id="qrmDl" style="flex:1" data-i="dlqr">دانلود</button><button class="sm" id="qrmX" data-i="close">بستن</button></div></div></div>
 <div id="qrb" style="display:none">__QR__</div>
 <div id="toast"></div>
 <script src="/speed.js"></script>
 <script>
 var D=__DATA__,$=function(i){return document.getElementById(i)};
+var I18N={fa:{used:'USED · مصرف',rem:'REMAINING · باقی‌مانده',tot:'TOTAL · حجم کل',exp:'EXPIRES · انقضا',avg:'AVG / DAY · میانگین روزانه',fc:'FORECAST · پیش‌بینی اتمام',dev:'DEVICES ONLINE · دستگاه‌های آنلاین',mvol:'مصرف حجم',mtime:'زمان باقی‌مانده',m14:'مصرف ۱۴ روز اخیر',today:'امروز',subt:'Subscription · اشتراک',subh:'یه ضربه بزن کپی میشه. اشتراک هر ۱۲ ساعت خودکار آپدیت میشه.',copy:'کپی لینک اشتراک',qr:'QR اشتراک',share:'اشتراک‌گذاری',dl:'دانلود کانفیگ‌ها',cfgt:'Configs · کانفیگ‌ها',copyall:'کپی همه',all:'همه',pingall:'تست تاخیر همه ⚡',sort:'مرتب‌سازی: سریع‌ها اول',spdt:'Speed test · تست سرعت',go:'شروع تست سرعت',qping:'تست سریع پینگ',conn:'تست اتصال اشتراک',guidet:'راهنمای اتصال',and:'اندروید',ios:'آیفون',win:'ویندوز',payt:'پرداخت و تمدید 💳',cardn:'شماره کارت (بزن کپی میشه)',paygo:'پرداخت آنلاین',supt:'پشتیبانی و تمدید',renew:'درخواست تمدید',copy2:'کپی',dlqr:'دانلود',close:'بستن',search:'جستجو...'},
+en:{used:'USED',rem:'REMAINING',tot:'TOTAL',exp:'EXPIRES',avg:'AVG / DAY',fc:'FORECAST',dev:'DEVICES ONLINE',mvol:'Volume usage',mtime:'Time left',m14:'Last 14 days',today:'today',subt:'Subscription',subh:'Tap to copy. Auto-updates every 12 hours.',copy:'Copy subscription link',qr:'Subscription QR',share:'Share',dl:'Download configs',cfgt:'Configs',copyall:'Copy all',all:'All',pingall:'Ping all ⚡',sort:'Sort: fastest first',spdt:'Speed test',go:'Start speed test',qping:'Quick ping',conn:'Test subscription',guidet:'Setup guide',and:'Android',ios:'iOS',win:'Windows',payt:'Payment 💳',cardn:'Card number (tap to copy)',paygo:'Pay online',supt:'Support & renewal',renew:'Request renewal',copy2:'Copy',dlqr:'Download',close:'Close',search:'Search...'}};
+var LG=localStorage.nxlang||'fa';
+function T(k){return (I18N[LG]&&I18N[LG][k])||I18N.fa[k]||k}
 function toast(t){var e=$('toast');e.textContent=t;e.className='s';setTimeout(function(){e.className=''},1600)}
 function cp(t,m){try{if(navigator.clipboard&&window.isSecureContext!==false){navigator.clipboard.writeText(t).then(function(){toast(m)},function(){fb()})}else fb()}catch(e){fb()}function fb(){try{var a=document.createElement('textarea');a.value=t;a.style.position='fixed';a.style.opacity='0';document.body.appendChild(a);a.select();document.execCommand('copy');a.remove()}catch(_){}toast(m)}}
 function B(n){var u=['B','KB','MB','GB','TB'],i=0;n=Math.max(0,+n||0);while(n>=1024&&i<4){n/=1024;i++}return n.toFixed(i>1?2:0)+' '+u[i]}
-function faDate(ts){try{return new Intl.DateTimeFormat('fa-IR-u-ca-persian',{year:'numeric',month:'long',day:'numeric'}).format(new Date(ts))}catch(e){return ''}}
-var STMAP={active:['فعال','ok'],off:['غیرفعال','bad'],expired:['منقضی شده','bad'],limited:['حجم تمام شده','bad']};
-var ST=STMAP[D.status]||STMAP.off;
-function setPill(s){var m=STMAP[s]||STMAP.off;$('stp').className='pill '+m[1];$('stp').lastChild.textContent=m[0]}
+function faDate(ts){try{if(LG==='fa')return new Intl.DateTimeFormat('fa-IR-u-ca-persian',{year:'numeric',month:'long',day:'numeric'}).format(new Date(ts));return new Intl.DateTimeFormat('en-US',{year:'numeric',month:'short',day:'numeric'}).format(new Date(ts))}catch(e){return ''}}
+var STMAP={fa:{active:['فعال','ok'],off:['غیرفعال','bad'],expired:['منقضی شده','bad'],limited:['حجم تمام شده','bad']},en:{active:['Active','ok'],off:['Disabled','bad'],expired:['Expired','bad'],limited:['Out of data','bad']}};
+function setPill(s){var m=(STMAP[LG]||STMAP.fa)[s]||STMAP.fa[s]||STMAP.fa.off;$('stp').className='pill '+m[1];$('stp').lastChild.textContent=m[0]}
 setPill(D.status);
+try{$('mf').href='/sub/'+D.id+'/manifest'}catch(e){}
 var pc=D.limit?Math.min(100,D.used/D.limit*100):0;
 var daysLeft=D.exp?Math.max(0,Math.ceil((D.exp-Date.now())/864e5)):null;
 var elapsed=Math.max(1,Math.round((Date.now()-(D.created||Date.now()))/864e5));
 var avg=D.used/elapsed;
 var rem=D.limit?Math.max(0,D.limit-D.used):null;
+function fmtDays(d){if(LG==='fa')return d+' روز';return d+(d===1?' day':' days')}
 if(D.status==='active'){
   $('t1').textContent=B(D.used);$('t2').textContent=D.limit?B(rem):'∞';$('t3').textContent=D.limit?B(D.limit):'∞';
-  $('t4').textContent=D.exp?daysLeft+' روز':'∞';
+  $('t4').textContent=D.exp?fmtDays(daysLeft):'∞';
   try{if(D.exp)$('t4d').textContent=faDate(D.exp)}catch(e){}
-  $('t5').textContent=B(avg)+' / روز';
+  $('t5').textContent=B(avg)+(LG==='fa'?' / روز':' / day');
   var f='—';
-  if(D.limit&&avg>0){var fd=Math.floor(rem/avg);f=fd<=0?'امروز تموم میشه':fd+' روز دیگه'}
-  else if(!D.limit&&D.exp){f=daysLeft+' روز دیگه'}
+  if(D.limit&&avg>0){var fd=Math.floor(rem/avg);f=fd<=0?(LG==='fa'?'امروز تموم میشه':'runs out today'):LG==='fa'?fd+' روز دیگه':'in '+fd+' days'}
+  else if(!D.limit&&D.exp){f=LG==='fa'?daysLeft+' روز دیگه':'in '+daysLeft+' days'}
   $('t6').textContent=f;
   $('rn').textContent=D.limit?Math.round(pc)+'%':'∞';$('rl').textContent=D.limit?'USED':'UNLIMITED';
-  $('pctTx').textContent=D.limit?Math.round(pc)+'% مصرف شده':'نامحدود';
+  $('pctTx').textContent=D.limit?Math.round(pc)+'%':'∞';
   setTimeout(function(){
     $('rp').style.strokeDasharray=(D.limit?pc/100*478:478)+' 478';if(!D.limit)$('rp').style.opacity='.35';
     var b=$('bar');b.style.width=(D.limit?pc:100)+'%';
-    var col=D.limit?(pc>90?'linear-gradient(90deg,#b23a4d,var(--bad))':pc>75?'linear-gradient(90deg,#b98a2c,var(--warn))':'linear-gradient(90deg,var(--ac2),var(--ac3))'):'linear-gradient(90deg,var(--ac2),var(--ac3))';
-    b.style.background=col;
-    if(D.exp){var total=Math.max(1,(D.exp-(D.created||D.exp-30*864e5)));var left=Math.max(0,D.exp-Date.now());var tp=100-Math.min(100,left/total*100);$('barT').style.width=tp+'%';$('tmTx').textContent=daysLeft+' روز مونده'}
+    b.style.background=D.limit?(pc>90?'linear-gradient(90deg,#b23a4d,var(--bad))':pc>75?'linear-gradient(90deg,#b98a2c,var(--warn))':'linear-gradient(90deg,var(--ac2),var(--ac3))'):'linear-gradient(90deg,var(--ac2),var(--ac3))';
+    if(D.exp){var total=Math.max(1,(D.exp-(D.created||D.exp-30*864e5)));var left=Math.max(0,D.exp-Date.now());var tp=100-Math.min(100,left/total*100);$('barT').style.width=tp+'%';$('tmTx').textContent=fmtDays(daysLeft)}
     else{$('timeMeter').style.display='none'}
   },250);
   var dys=Array.isArray(D.days)&&D.days.length?D.days.slice(-14):[];
-  if(dys.length){var mx=Math.max.apply(null,dys.concat([1]));var sum=dys.reduce(function(a,b){return a+b},0);$('sumTx').textContent=B(sum)+' در ۱۴ روز';
+  if(dys.length){var mx=Math.max.apply(null,dys.concat([1]));var sum=dys.reduce(function(a,b){return a+b},0);$('sumTx').textContent=B(sum);$('chS').textContent=LG==='fa'?'۱۴ روز پیش':'14 days ago';
     $('chart').innerHTML=dys.map(function(v,i){var h=Math.max(4,v/mx*100);return '<i style="height:'+h+'%" class="'+(i===dys.length-1?'today':'')+'" title="'+B(v)+'"></i>'}).join('');
-    try{$('chS').textContent='۱۴ روز پیش'}catch(e){}
   }else{$('chart').innerHTML='<div class="empty">—</div>'}
 }else{
-  var msgs={off:['💤','غیرفعاله','این اشتراک توسط مدیر غیرفعال شده. به پشتیبانی پیام بده.'],expired:['⌛','تموم شده','مدت اشتراکت تموم شده. برای تمدید دکمه تمدید رو بزن.'],limited:['📦','حجمت تموم شده','حجم اشتراکت تموم شده. برای تمدید دکمه تمدید رو بزن.']};
-  var m=msgs[D.status]||msgs.off;
+  var msgs={fa:{off:['💤','غیرفعاله','این اشتراک توسط مدیر غیرفعال شده. به پشتیبانی پیام بده.'],expired:['⌛','تموم شده','مدت اشتراکت تموم شده. برای تمدید دکمه تمدید رو بزن.'],limited:['📦','حجمت تموم شده','حجم اشتراکت تموم شده. برای تمدید دکمه تمدید رو بزن.']},
+  en:{off:['💤','Disabled','This subscription was disabled. Contact support.'],expired:['⌛','Expired','Your plan expired. Tap renew to extend.'],limited:['📦','Out of data','You ran out of data. Tap renew to extend.']}};
+  var m=(msgs[LG]||msgs.fa)[D.status]||msgs.fa.off;
   $('liveBox').style.display='none';
   $('deadBox').innerHTML='<div class="nx-dead"><div class="ic">'+m[0]+'</div><h2>'+m[1]+'</h2><p>'+m[2]+'</p><p style="font-family:var(--fm);direction:ltr;margin-top:8px">'+B(D.used)+' / '+(D.limit?B(D.limit):'∞')+'</p></div>';
   $('act').style.display='none';$('cc').style.display='none';$('spc').style.display='none';
 }
 try{$('idchip').textContent='ID '+D.id.slice(0,8);}catch(e){}
 try{$('hostline').textContent=D.host||location.hostname;}catch(e){}
-$('idchip').onclick=function(){cp(D.id,'آیدی کپی شد')};
-$('hostline').onclick=function(){cp(D.host||location.hostname,'هاست کپی شد')};
+$('idchip').onclick=function(){cp(D.id,'ID')};
+$('hostline').onclick=function(){cp(D.host||location.hostname,'host')};
 var TG='<svg viewBox="0 0 24 24"><path fill="currentColor" d="M21.6 3.4L2.7 10.7c-.9.35-.9 1.6.05 1.9l4.6 1.5 1.8 5.6c.2.7 1.1.9 1.6.4l2.6-2.4 4.7 3.5c.6.4 1.4.1 1.6-.6L23.1 5c.2-.9-.7-1.8-1.5-1.6zM9.4 13.6l8.2-5.1-6.3 6.1-.3 3z"/></svg>',C=D.contact||{},cx='';
-if(C.support)cx+='<a class="tg" style="flex:1;min-width:200px" href="https://t.me/'+C.support+'" target="_blank" rel="noopener">'+TG+'<span><b>پشتیبانی و تمدید</b><small>@'+C.support+'</small></span></a>';
-if(C.channel)cx+='<a class="tg" style="flex:1;min-width:200px" href="https://t.me/'+C.channel+'" target="_blank" rel="noopener">'+TG+'<span><b>کانال اطلاع‌رسانی</b><small>@'+C.channel+'</small></span></a>';
+if(C.support)cx+='<a class="tg" style="flex:1;min-width:200px" href="https://t.me/'+C.support+'" target="_blank" rel="noopener">'+TG+'<span><b>'+(LG==='fa'?'پشتیبانی و تمدید':'Support & renewal')+'</b><small>@'+C.support+'</small></span></a>';
+if(C.channel)cx+='<a class="tg" style="flex:1;min-width:200px" href="https://t.me/'+C.channel+'" target="_blank" rel="noopener">'+TG+'<span><b>'+(LG==='fa'?'کانال اطلاع‌رسانی':'News channel')+'</b><small>@'+C.channel+'</small></span></a>';
 if(cx)$('ctr').innerHTML=cx;else $('ctc').style.display='none';
-$('renewBtn').onclick=function(){var msg='سلام، تمدید اشتراک '+document.title.replace('BATAMN · ','')+' (ID '+D.id.slice(0,8)+')';if(C.support)window.open('https://t.me/'+C.support+'?text='+encodeURIComponent(msg),'_blank');else toast('پشتیبانی تنظیم نشده')};
+$('renewBtn').onclick=function(){var nm=document.title.replace('BATAMN · ','');var msg=(LG==='fa'?'سلام، تمدید اشتراک ':'Hi, renew subscription ')+nm+' (ID '+D.id.slice(0,8)+')';
+  if(D.bot)window.open('https://t.me/'+D.bot+'?start='+D.id.slice(0,8),'_blank');
+  else if(C.support)window.open('https://t.me/'+C.support+'?text='+encodeURIComponent(msg),'_blank');
+  else toast('—')};
 $('ft').innerHTML='BATAMN'+(C.support?'<br><a href="https://t.me/'+C.support+'" target="_blank" rel="noopener">@'+C.support+'</a>':'')+(C.channel?' &nbsp;·&nbsp; <a href="https://t.me/'+C.channel+'" target="_blank" rel="noopener">@'+C.channel+'</a>':'');
-try{$('upd').textContent='آخرین بروزرسانی: '+new Date().toLocaleTimeString('fa-IR')}catch(e){}
-function dev(n,m){$('dv').textContent=n+(m?' / '+m:'');var d='';if(m){for(var i=0;i<m;i++)d+='<i class="dot'+(i<n?' on':'')+(n>m&&i===m-1?' over':'')+'"></i>'}$('dd').innerHTML=d;$('dv').className=n?'live':'';$('liveTx').textContent=n?n+' دستگاه آنلاین':'متصل به سرور · کسی آنلاین نیست'}
+function updClock(){try{$('upd').textContent=new Date().toLocaleTimeString(LG==='fa'?'fa-IR':'en-US')}catch(e){}}
+updClock();
+function dev(n,m){$('dv').textContent=n+(m?' / '+m:'');var d='';if(m){for(var i=0;i<m;i++)d+='<i class="dot'+(i<n?' on':'')+(n>m&&i===m-1?' over':'')+'"></i>'}$('dd').innerHTML=d;$('dv').className=n?'live':'';$('liveTx').textContent=n?(LG==='fa'?n+' دستگاه آنلاین':n+' online'):(LG==='fa'?'متصل به سرور · کسی آنلاین نیست':'Connected · nobody online')}
 dev(D.online||0,D.maxDev||0);
 var reloaded=false;
-function pollLive(silent){fetch('/sub/'+D.id+'/live',{cache:'no-store'}).then(function(r){return r.json()}).then(function(x){dev(x.online,x.max);if(x.status&&x.status!==D.status&&!reloaded){reloaded=true;toast('وضعیت اشتراک عوض شد');setTimeout(function(){location.reload()},1400)}}).catch(function(){})}
-if(D.status=='active'){setInterval(function(){pollLive()},8000)}
-$('rf').onclick=function(){this.textContent='…';pollLive();var b=this;setTimeout(function(){b.textContent='↻';toast('به‌روز شد');try{$('upd').textContent='آخرین بروزرسانی: '+new Date().toLocaleTimeString('fa-IR')}catch(e){}},900)};
+function pollLive(){fetch('/sub/'+D.id+'/live',{cache:'no-store'}).then(function(r){return r.json()}).then(function(x){dev(x.online,x.max);if(x.status&&x.status!==D.status&&!reloaded){reloaded=true;toast('…');setTimeout(function(){location.reload()},1400)}}).catch(function(){})}
+if(D.status=='active'){setInterval(pollLive,8000)}
+$('rf').onclick=function(){this.textContent='…';pollLive();updClock();var b=this;setTimeout(function(){b.textContent='↻';toast('✓')},900)};
+$('lng').onclick=function(){LG=LG==='fa'?'en':'fa';localStorage.nxlang=LG;applyLang()};
+function applyLang(){document.documentElement.lang=LG;document.documentElement.dir=LG==='fa'?'rtl':'ltr';$('lng').textContent=LG==='fa'?'EN':'فا';
+  document.querySelectorAll('[data-i]').forEach(function(e){e.textContent=T(e.dataset.i)});
+  document.querySelectorAll('[data-ph]').forEach(function(e){e.placeholder=T(e.dataset.ph)});
+  setPill(D.status);dev(D.online||0,D.maxDev||0);renderGuide(curG);renderApps();renderCf();updClock();
+  try{if(D.exp&&D.status==='active')$('t4d').textContent=faDate(D.exp)}catch(e){}}
 SpeedTest.bind('u='+D.id);
-var U=D.sub,E=encodeURIComponent(U);
-$('subbox').textContent=U;
-$('subbox').onclick=function(){cp(U,'لینک اشتراک کپی شد')};
-$('cs').onclick=function(){cp(U,'لینک اشتراک کپی شد')};
-$('shareBtn').onclick=function(){if(navigator.share){navigator.share({title:document.title,text:'اشتراک BATAMN',url:U}).catch(function(){})}else cp(U,'لینک کپی شد، بفرستش')};
-$('dlBtn').onclick=function(){var t=D.links.map(function(l){return l.l}).join('\n');var b=new Blob([t],{type:'text/plain'});var a=document.createElement('a');a.href=URL.createObjectURL(b);a.download='batamn-'+D.id.slice(0,8)+'.txt';document.body.appendChild(a);a.click();setTimeout(function(){URL.revokeObjectURL(a.href);a.remove()},600);toast('فایل دانلود شد')};
+var useAlt=false;
+function curSub(){return (useAlt&&D.altSub)?D.altSub:D.sub}
+function refreshSub(){var U2=curSub(),E2=encodeURIComponent(U2);$('subbox').textContent=U2;$('altTx').textContent=(useAlt?(LG==='fa'?'برگرد به دامنه اصلی':'Back to main domain'):(LG==='fa'?'اتصال با دامنه جایگزین: ':'Use fallback: ')+(D.fallback||''));renderApps()}
+if(D.altSub){$('altWrap').style.display='grid';$('altTx').textContent=(LG==='fa'?'اتصال با دامنه جایگزین: ':'Use fallback: ')+D.fallback;
+  $('altBtn').onclick=function(){useAlt=!useAlt;refreshSub();toast(useAlt?D.fallback:D.host)}}
 var subQR=$('qrb').innerHTML;
 var qrmCap='';
-function openQRM(title,svg,cap){$('qrmTitle').textContent=title;$('qrmBox').innerHTML=svg||'<div class="empty">QR موجود نیست</div>';$('qrmCap').textContent=cap||'';qrmCap=cap||'';$('qrm').classList.add('o')}
+function openQRM(title,html,cap){$('qrmTitle').textContent=title;$('qrmBox').innerHTML=html||'<div class="empty">—</div>';$('qrmCap').textContent=cap||'';qrmCap=cap||'';$('qrm').classList.add('o')}
 function closeQRM(){$('qrm').classList.remove('o')}
-$('qrbtn').onclick=function(){openQRM('QR اشتراک',subQR,U)};
+function subQRHtml(){if(!useAlt)return subQR;return '<img alt="qr" src="/qr?d='+encodeURIComponent(curSub())+'">'}
+$('qrbtn').onclick=function(){openQRM('QR',subQRHtml(),curSub())};
 $('qrmX').onclick=closeQRM;$('qrm').onclick=function(e){if(e.target===$('qrm'))closeQRM()};
-$('qrmCopy').onclick=function(){cp(qrmCap||U,'کپی شد')};
-$('qrmDl').onclick=function(){var s=$('qrmBox').innerHTML;if(!s||s.indexOf('<svg')<0){toast('QR موجود نیست');return}var b=new Blob([s],{type:'image/svg+xml'});var a=document.createElement('a');a.href=URL.createObjectURL(b);a.download='batamn-qr-'+D.id.slice(0,8)+'.svg';document.body.appendChild(a);a.click();setTimeout(function(){URL.revokeObjectURL(a.href);a.remove()},600)};
-$('apps').innerHTML=[['v2rayNG','اندروید','v2rayng://install-sub?url='+E+'&name=BATAMN'],['Hiddify','همه پلتفرم','hiddify://import/'+U+'#BATAMN'],['Streisand','iOS','streisand://import/'+U],['Shadowrocket','iOS','shadowrocket://add/sub://'+btoa(U)+'?remark=BATAMN'],['NekoBox','اندروید','nekobox://import/'+U],['v2rayN','ویندوز','v2rayn://import/'+U]].map(function(a){return '<a class="nx-app" href="'+a[2]+'">'+a[0]+'<small>'+a[1]+'</small></a>'}).join('');
-var FL='all';
+$('qrmCopy').onclick=function(){cp(qrmCap||curSub(),'✓')};
+$('qrmDl').onclick=function(){var s=$('qrmBox').innerHTML;if(!s||s.indexOf('<svg')<0){if(s.indexOf('<img')>=0){window.open($('qrmBox').querySelector('img').src,'_blank');return}toast('—');return}var b=new Blob([s],{type:'image/svg+xml'});var a=document.createElement('a');a.href=URL.createObjectURL(b);a.download='batamn-qr-'+D.id.slice(0,8)+'.svg';document.body.appendChild(a);a.click();setTimeout(function(){URL.revokeObjectURL(a.href);a.remove()},600)};
+function shareOrCopy(){var U2=curSub();if(navigator.share){navigator.share({title:document.title,text:'BATAMN',url:U2}).catch(function(){})}else cp(U2,'✓')}
+$('cs').onclick=function(){cp(curSub(),'✓')};
+$('subbox').onclick=function(){cp(curSub(),'✓')};
+$('shareBtn').onclick=shareOrCopy;
+$('dlBtn').onclick=function(){var t=D.links.map(function(l){return l.l}).join('\n');var b=new Blob([t],{type:'text/plain'});var a=document.createElement('a');a.href=URL.createObjectURL(b);a.download='batamn-'+D.id.slice(0,8)+'.txt';document.body.appendChild(a);a.click();setTimeout(function(){URL.revokeObjectURL(a.href);a.remove()},600);toast('✓')};
+function renderApps(){var U2=curSub(),E2=encodeURIComponent(U2);
+  $('apps').innerHTML=[['v2rayNG','Android','v2rayng://install-sub?url='+E2+'&name=BATAMN'],['Hiddify','All','hiddify://import/'+U2+'#BATAMN'],['Streisand','iOS','streisand://import/'+U2],['Shadowrocket','iOS','shadowrocket://add/sub://'+btoa(U2)+'?remark=BATAMN'],['NekoBox','Android','nekobox://import/'+U2],['v2rayN','Windows','v2rayn://import/'+U2]].map(function(a){return '<a class="nx-app" href="'+a[2]+'">'+a[0]+'<small>'+a[1]+'</small></a>'}).join('')}
+renderApps();refreshSub();
+var FL='all',SORTED=false,PING={};
 function protoOf(l){try{return l.split('://')[0].toLowerCase()}catch(e){return ''}}
-function renderCf(){var q=($('cfq').value||'').toLowerCase();var l=D.links.filter(function(x){var p=protoOf(x.l);var okP=FL==='all'||p===FL;var okQ=!q||x.n.toLowerCase().indexOf(q)>=0;return okP&&okQ});
+function parseLink(l){var m=/@([^:/?#]+)/.exec(l||'');var host=m?m[1]:'';var pm=/[?&]path=([^&]+)/.exec(l||'');var path='/';try{if(pm)path=decodeURIComponent(pm[1])}catch(e){if(pm)path=pm[1]}if(path.charAt(0)!=='/')path='/'+path;return{host:host,path:path}}
+function msHtml(gi){if(!(gi in PING))return '';var v=PING[gi];if(v==null)return '<span class="nx-ms">timeout</span>';var c=v<350?'g':v<900?'y':'r';return '<span class="nx-ms '+c+'">'+Math.round(v)+' ms</span>'}
+function renderCf(){var q=($('cfq').value||'').toLowerCase();var l=D.links.filter(function(x){var p=protoOf(x.l);return (FL==='all'||p===FL)&&(!q||x.n.toLowerCase().indexOf(q)>=0)});
+  if(SORTED)l=l.slice().sort(function(a,b){var x=PING[D.links.indexOf(a)],y=PING[D.links.indexOf(b)];if(x==null&&y==null)return 0;if(x==null)return 1;if(y==null)return -1;return x-y});
   $('ccn').textContent=l.length+' / '+D.links.length;
-  $('cfs').innerHTML=l.length?l.map(function(x){var gi=D.links.indexOf(x);var p=protoOf(x.l).toUpperCase();return '<div class="nx-cf"><div class="badge">'+x.n.slice(0,2).toUpperCase()+'</div><div class="g" data-c="'+gi+'"><b>'+x.n+'</b><small>'+p+' · بزن کپی میشه</small></div><span class="nx-proto">'+p+'</span><div style="display:flex;gap:6px"><button class="sm" data-q="'+gi+'">QR</button><button class="sm p" data-c="'+gi+'">کپی</button></div></div><div class="nx-q" id="q'+gi+'">'+x.qr+'</div>'}).join(''):'<div class="empty">کانفیگی پیدا نشد</div>'}
+  $('cfs').innerHTML=l.length?l.map(function(x){var gi=D.links.indexOf(x);var p=protoOf(x.l).toUpperCase();return '<div class="nx-cf"><div class="badge">'+x.n.slice(0,2).toUpperCase()+'</div><div class="g" data-c="'+gi+'"><b>'+x.n+'</b><small>'+p+' · '+(LG==='fa'?'بزن کپی میشه':'tap to copy')+'</small></div>'+msHtml(gi)+'<span class="nx-proto">'+p+'</span><div style="display:flex;gap:6px"><button class="sm" data-q="'+gi+'">QR</button><button class="sm p" data-c="'+gi+'">✓</button></div></div><div class="nx-q" id="q'+gi+'">'+x.qr+'</div>'}).join(''):'<div class="empty">—</div>'}
 renderCf();
 $('cfq').oninput=renderCf;
 $('fch').onclick=function(e){var b=e.target.closest('[data-p]');if(!b)return;FL=b.dataset.p;var all=this.querySelectorAll('.nx-fc');for(var i=0;i<all.length;i++)all[i].classList.remove('on');b.classList.add('on');renderCf()};
 $('cfs').onclick=function(e){var b=e.target.closest('button');var g=e.target.closest('.g');
-  if(b&&b.dataset.c!=null){cp(D.links[+b.dataset.c].l,'کانفیگ کپی شد');return}
+  if(b&&b.dataset.c!=null){cp(D.links[+b.dataset.c].l,'✓');return}
   if(b&&b.dataset.q!=null){var i=+b.dataset.q;var el=$('q'+i);if(el){el.classList.toggle('o');if(el.classList.contains('o'))el.scrollIntoView({block:'nearest',behavior:'smooth'})}return}
-  if(g&&g.dataset.c!=null){cp(D.links[+g.dataset.c].l,'کانفیگ کپی شد')}};
-$('copyAll').onclick=function(){cp(D.links.map(function(l){return l.l}).join('\n'),D.links.length+' کانفیگ کپی شد')};
-$('pingBtn').onclick=function(){var b=this;b.disabled=true;b.textContent='…';var t0=performance.now();fetch('/speed/ping?u='+D.id+'&r='+Math.random(),{cache:'no-store'}).then(function(r){if(!r.ok)throw 0;toast('پینگ: '+Math.round(performance.now()-t0)+'ms')}).catch(function(){toast('خطا در تست')}).then(function(){b.disabled=false;b.textContent='تست سریع پینگ'})};
-$('connBtn').onclick=function(){var b=this;b.disabled=true;b.textContent='…';fetch(D.sub,{headers:{accept:'text/plain'},cache:'no-store'}).then(function(r){if(r.status===200){toast('اشتراک سالمه ✓')}else if(r.status===403){toast('اشتراک غیرفعاله!')}else toast('خطا: '+r.status)}).catch(function(){toast('خطا در اتصال')}).then(function(){b.disabled=false;b.textContent='تست اتصال اشتراک'})};
-var GUIDES={and:['Hiddify یا v2rayNG رو از گوگل‌پلی نصب کن','دکمه «اشتراک‌گذاری» یا «کپی لینک اشتراک» رو بزن','توی اپ، افزودن از کلیپ‌برد / Import from clipboard رو بزن','اشتراک رو آپدیت کن و یه کانفیگ انتخاب کن و وصل شو'],
-ios:['Streisand یا Shadowrocket رو از اپ‌استور نصب کن','روی دکمه Streisand / Shadowrocket بالا بزن تا خودش اضافه بشه','اگه نشد، لینک رو کپی کن و دستی Import کن','یه سرور انتخاب کن و VPN رو روشن کن'],
-win:['v2rayN یا Hiddify رو دانلود و اجرا کن','لینک اشتراک رو کپی کن','توی اپ: Add subscription / افزودن اشتراک','گروه رو آپدیت کن و یه سرور انتخاب کن و Enter بزن']};
-function renderGuide(k){$('guide').innerHTML=GUIDES[k].map(function(t){return '<li>'+t+'</li>'}).join('')}
+  if(g&&g.dataset.c!=null){cp(D.links[+g.dataset.c].l,'✓')}};
+$('copyAll').onclick=function(){cp(D.links.map(function(l){return l.l}).join('\n'),'✓ ('+D.links.length+')')};
+function wsPing(host,path){return new Promise(function(res){var done=false,t0=performance.now();var to=setTimeout(function(){fin(null)},7000);function fin(ms){if(done)return;done=true;clearTimeout(to);try{s.close()}catch(e){}res(ms)}var s;try{s=new WebSocket('wss://'+host+path)}catch(e){fin(null);return}s.onopen=function(){fin(performance.now()-t0)};s.onerror=function(){fin(performance.now()-t0)};s.onclose=function(){fin(performance.now()-t0)}})}
+$('pingAll').onclick=function(){var b=this;if(b.disabled)return;b.disabled=true;var i=0,n=D.links.length;
+  b.textContent='… 0/'+n;
+  var next=function(){if(i>=n){b.disabled=false;b.textContent=T('pingall');renderCf();toast('✓');return}
+    var gi=i++,x=D.links[gi],pp=parseLink(x.l);b.textContent='… '+i+'/'+n;
+    if(!pp.host){PING[gi]=null;next();return}
+    wsPing(pp.host,pp.path).then(function(ms){PING[gi]=ms;renderCf();next()})};
+  next();next();next();next()};
+$('sortPing').onclick=function(){SORTED=!SORTED;this.classList.toggle('p',SORTED);renderCf();if(SORTED)toast('⚡')};
+$('pingBtn').onclick=function(){var b=this;b.disabled=true;b.textContent='…';var t0=performance.now();fetch('/speed/ping?u='+D.id+'&r='+Math.random(),{cache:'no-store'}).then(function(r){if(!r.ok)throw 0;toast(Math.round(performance.now()-t0)+'ms')}).catch(function(){toast('!')}).then(function(){b.disabled=false;b.textContent=T('qping')})};
+$('connBtn').onclick=function(){var b=this;b.disabled=true;b.textContent='…';fetch(curSub(),{headers:{accept:'text/plain'},cache:'no-store'}).then(function(r){if(r.status===200){toast('✓')}else if(r.status===403){toast('✕')}else toast('! '+r.status)}).catch(function(){toast('!')}).then(function(){b.disabled=false;b.textContent=T('conn')})};
+var GUIDES={fa:{and:['Hiddify یا v2rayNG رو از گوگل‌پلی نصب کن','«کپی لینک اشتراک» رو بزن','توی اپ Import from clipboard رو بزن','اشتراک رو آپدیت کن و وصل شو'],
+ios:['Streisand یا Shadowrocket رو از اپ‌استور نصب کن','روی دکمه‌ش بالا بزن تا خودش اضافه بشه','اگه نشد لینک رو کپی و دستی Import کن','یه سرور انتخاب کن و VPN رو روشن کن'],
+win:['v2rayN یا Hiddify رو دانلود و اجرا کن','لینک اشتراک رو کپی کن','توی اپ Add subscription رو بزن','گروه رو آپدیت کن و Enter بزن']},
+en:{and:['Install Hiddify or v2rayNG from Play Store','Tap "Copy subscription link"','In the app tap Import from clipboard','Update and connect'],
+ios:['Install Streisand or Shadowrocket','Tap its button above to auto-import','Or copy the link and import manually','Pick a server and turn on VPN'],
+win:['Download and run v2rayN or Hiddify','Copy the subscription link','In the app add a subscription','Update the group, pick a server, hit Enter']}};
+var curG='and';
+function renderGuide(k){curG=k;var arr=((GUIDES[LG]||GUIDES.fa)[k]||GUIDES.fa.and);$('guide').innerHTML=arr.map(function(t){return '<li>'+t+'</li>'}).join('')}
 renderGuide('and');
 $('gtabs').onclick=function(e){var b=e.target.closest('[data-g]');if(!b)return;var all=this.querySelectorAll('.nx-tab');for(var i=0;i<all.length;i++)all[i].classList.remove('on');b.classList.add('on');renderGuide(b.dataset.g)};
+if(D.pay&&(D.pay.card||D.pay.url)){$('payc').style.display='block';
+  if(D.pay.card){$('paycard').textContent=D.pay.card;$('paybox').onclick=function(){cp(D.pay.card.replace(/\s/g,''),'✓')}}else{$('paybox').style.display='none'}
+  if(D.pay.url){$('paylink').style.display='block';$('paylink').onclick=function(){window.open(D.pay.url,'_blank')}}}
+applyLang();
 </script></body></html>
