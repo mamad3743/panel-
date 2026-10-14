@@ -10,7 +10,7 @@ RUN set -e; \
 WORKDIR /app
 RUN npm init -y >/dev/null && npm i qrcode-generator@1.4.4 --no-audit --no-fund
 RUN npm i vazirmatn @fontsource-variable/inter @fontsource-variable/jetbrains-mono --no-audit --no-fund || echo 'fonts skipped'
-COPY boot.js server.js index.html app.js sub.html style.css bg.svg ./
+COPY *.js *.html *.css *.svg ./
 COPY assets ./assets
 RUN date +%s > /app/BUILD_TS
 ENV PORT=8080
