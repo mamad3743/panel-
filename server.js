@@ -267,7 +267,7 @@ async function scan(sni,count){
 }
 
 // ---------- socks locations (multi-location egress) ----------
-const DEFAULT_SOURCES=['https://raw.githubusercontent.com/TheSpeedX/PROXY-List/master/socks5.txt','https://raw.githubusercontent.com/monosans/proxy-list/main/proxies/socks5.txt','https://raw.githubusercontent.com/mmpx12/proxy-list/master/socks5.txt'];
+const DEFAULT_SOURCES=['https://cdn.jsdelivr.net/gh/proxifly/free-proxy-list@main/proxies/protocols/socks5/data.txt','https://cdn.jsdelivr.net/gh/proxyscrape/free-proxy-list@main/proxies/protocols/socks5/data.txt','https://raw.githubusercontent.com/ClearProxy/checked-proxy-list/main/socks5/raw/all.txt'];
 const srcList=()=>Array.isArray(db.settings.sources)&&db.settings.sources.length?db.settings.sources:DEFAULT_SOURCES;
 function socksConn(host,port,user,pass,th,tp,to=8000){return new Promise(res=>{
   const t0=Date.now();
@@ -309,26 +309,45 @@ function socksConn(host,port,user,pass,th,tp,to=8000){return new Promise(res=>{
     }
   });
 })}
-async function socksTest(host,port,user,pass,to=6000){const c=await socksConn(host,port,user,pass,'1.1.1.1',443,to);if(c.sock){try{c.sock.destroy()}catch(e){}}return{ms:c.ms,why:c.why}}
-function httpTest(host,port,user,pass,to=6000){return new Promise(res=>{
-  const t0=Date.now();let done=false,buf='',s=null;
-  const fin=(ms,why)=>{if(done)return;done=true;clearTimeout(timer);try{s&&s.destroy()}catch(e){}res({ms,why})};
+// ---- end-to-end proxy probe: dial a DOMAIN through the proxy, do a REAL verified TLS handshake and fetch Cloudflare's trace ----
+// (a proxy that only answers the handshake, resolves no domains, or tampers with TLS fails here)
+const E2E_HOST=process.env.E2E_HOST||'www.cloudflare.com',E2E_INSECURE=process.env.E2E_INSECURE==='1';
+function httpConn(host,port,user,pass,th,tp,to=8000){return new Promise(res=>{
+  let done=false,buf='',s=null;
+  const fin=(sock,why)=>{if(done)return;done=true;clearTimeout(timer);if(!sock){try{s&&s.destroy()}catch(e){}}res({sock,why})};
   const timer=setTimeout(()=>fin(null,'timeout'),to);
   try{s=net.connect({host,port:+port,timeout:to})}catch(e){fin(null,'conn');return}
   s.on('timeout',()=>fin(null,'timeout'));
   s.on('error',e=>fin(null,e&&e.code==='ENOTFOUND'?'dns':(e&&e.code==='ECONNREFUSED'?'refused':'conn')));
-  s.on('connect',()=>{
-    let h='CONNECT 1.1.1.1:443 HTTP/1.1\r\nHost: 1.1.1.1:443\r\n';
+  s.on('connect',()=>{let h='CONNECT '+th+':'+tp+' HTTP/1.1\r\nHost: '+th+':'+tp+'\r\n';
     if(user)h+='Proxy-Authorization: Basic '+Buffer.from(user+':'+(pass||'')).toString('base64')+'\r\n';
     try{s.write(h+'\r\n')}catch(e){fin(null,'conn')}});
-  s.on('data',d=>{buf+=String(d);if(buf.indexOf('\r\n\r\n')<0&&buf.length<8000)return;
-    const m=/^HTTP\/1\.[01]\s+(\d{3})/.exec(buf);
-    if(m&&+m[1]===200)fin(Date.now()-t0,null);else fin(null,m?'denied':'proto')})})}
-async function detectProto(host,port,user,pass,to=7000){
-  const out=await Promise.all([socksTest(host,port,user,pass,to),httpTest(host,port,user,pass,to)]);
-  const ok=[out[0].ms!=null?{proto:'socks5',ms:out[0].ms}:null,out[1].ms!=null?{proto:'http',ms:out[1].ms}:null].filter(Boolean).sort((a,b)=>a.ms-b.ms);
-  if(ok.length)return{proto:ok[0].proto,ms:ok[0].ms};
+  const onD=d=>{buf+=d.toString('latin1');if(buf.indexOf('\r\n\r\n')<0){if(buf.length>8000)fin(null,'proto');return}
+    s.removeListener('data',onD);const m=/^HTTP\/1\.[01]\s+(\d{3})/.exec(buf);
+    if(m&&+m[1]===200)fin(s,null);else fin(null,m?'denied':'proto')};
+  s.on('data',onD)})}
+async function e2eProbe(host,port,user,pass,proto,to=10000){
+  const t0=Date.now(),T=E2E_HOST;
+  const c=proto==='http'?await httpConn(host,port,user,pass,T,443,to):await socksConn(host,port,user,pass,T,443,to);
+  if(!c.sock)return{ms:null,why:c.why||'conn'};
+  const sock=c.sock;sock.removeAllListeners('data');sock.removeAllListeners('timeout');sock.removeAllListeners('error');sock.on('error',()=>{});sock.setTimeout(0);
+  return await new Promise(res=>{
+    let raw='',done=false,ts=null;
+    const fin=o=>{if(done)return;done=true;clearTimeout(tm);try{ts&&ts.destroy()}catch(e){}try{sock.destroy()}catch(e){}res(o)};
+    const tm=setTimeout(()=>fin({ms:null,why:'tls-timeout'}),Math.max(3000,to-(Date.now()-t0)));
+    try{ts=tls.connect({socket:sock,servername:T,rejectUnauthorized:!E2E_INSECURE,ALPNProtocols:['http/1.1']})}catch(e){fin({ms:null,why:'tls'});return}
+    ts.on('error',()=>fin({ms:null,why:'tls'}));
+    ts.on('secureConnect',()=>{try{ts.write('GET /cdn-cgi/trace HTTP/1.1\r\nHost: '+T+'\r\nConnection: close\r\nUser-Agent: BATAMN\r\n\r\n')}catch(e){fin({ms:null,why:'conn'})}});
+    ts.on('data',d=>{raw+=d.toString('utf8');const ip=/^ip=(\S+)/m.exec(raw),loc=/^loc=([A-Z]{2})/m.exec(raw);if(ip&&loc)fin({ms:Date.now()-t0,ip:ip[1],cc:loc[1]})});
+    ts.on('end',()=>fin({ms:null,why:'no-trace'}))})}
+const socksTest=(h,p,u,pw,to=8000)=>e2eProbe(h,p,u,pw,'socks5',to).then(r=>({ms:r.ms,why:r.why}));
+const httpTest=(h,p,u,pw,to=8000)=>e2eProbe(h,p,u,pw,'http',to).then(r=>({ms:r.ms,why:r.why}));
+async function detectProto(host,port,user,pass,to=9000){
+  const out=await Promise.all([e2eProbe(host,port,user,pass,'socks5',to),e2eProbe(host,port,user,pass,'http',to)]);
+  const ok=[out[0].ms!=null?{proto:'socks5',...out[0]}:null,out[1].ms!=null?{proto:'http',...out[1]}:null].filter(Boolean).sort((a,b)=>a.ms-b.ms);
+  if(ok.length)return{proto:ok[0].proto,ms:ok[0].ms,ip:ok[0].ip,cc:ok[0].cc};
   return{proto:'',ms:null,why:out[0].why||out[1].why||'conn'}}
+const ccName=cc=>{try{return new Intl.DisplayNames(['en'],{type:'region'}).of(cc)||''}catch(e){return''}};
 async function geoIP(ip){
   ip=String(ip||'').trim();if(!ip)return null;
   const eps=[
@@ -346,50 +365,9 @@ async function geoIP(ip){
   return null}
 const ccFlag=cc=>{cc=String(cc||'').toUpperCase();if(!/^[A-Z]{2}$/.test(cc))return'🌐';try{return String.fromCodePoint(cc.charCodeAt(0)+127397,cc.charCodeAt(1)+127397)}catch(e){return'🌐'}};
 async function socksEgress(host,port,user,pass,proto){
-  if(proto==='http')return httpTunnelEgress(host,port,user,pass);
-  const c=await socksConn(host,port,user,pass,'ip-api.com',80,10000);
-  if(!c.sock)return{why:c.why};
-  const sock=c.sock;
-  try{
-    await new Promise((res,rej)=>{sock.once('error',rej);sock.write('GET /json/ HTTP/1.0\r\nHost: ip-api.com\r\nConnection: close\r\n\r\n',res)});
-    let raw='';
-    await new Promise(res=>{const tm=setTimeout(res,9000);
-      sock.on('data',d=>{raw+=String(d);if(raw.length>8000){clearTimeout(tm);res()}});
-      sock.on('close',()=>{clearTimeout(tm);res()});sock.on('error',()=>{clearTimeout(tm);res()})});
-    const j=JSON.parse(raw.slice(raw.indexOf('\r\n\r\n')+4));
-    if(j&&j.status==='ok'&&j.query)return{ip:j.query,country:cleanLoc(j.country||''),cc:String(j.countryCode||'').toUpperCase()};
-    return{why:'geo'};
-  }catch(e){return{why:'conn'}}
-  finally{try{sock.destroy()}catch(e){}}
-}
-function httpTunnelEgress(host,port,user,pass){
-  return new Promise(res=>{
-    let done=false,raw='',stage=0,s=null;
-    const fin=o=>{if(done)return;done=true;clearTimeout(tm);try{s&&s.destroy()}catch(e){}res(o)};
-    const tm=setTimeout(()=>fin({why:'timeout'}),14000);
-    try{s=net.connect({host,port:+port,timeout:10000})}catch(e){fin({why:'conn'});return}
-    s.on('timeout',()=>fin({why:'timeout'}));
-    s.on('error',e=>fin({why:e&&e.code==='ENOTFOUND'?'dns':(e&&e.code==='ECONNREFUSED'?'refused':'conn')}));
-    s.on('connect',()=>{
-      let h='CONNECT ip-api.com:80 HTTP/1.1\r\nHost: ip-api.com:80\r\n';
-      if(user)h+='Proxy-Authorization: Basic '+Buffer.from(user+':'+(pass||'')).toString('base64')+'\r\n';
-      try{s.write(h+'\r\n')}catch(e){fin({why:'conn'})}});
-    s.on('data',d=>{raw+=String(d);
-      if(stage===0){
-        const i=raw.indexOf('\r\n\r\n');if(i<0){if(raw.length>4000)fin({why:'denied'});return}
-        const m=/^HTTP\/1\.[01]\s+(\d{3})/.exec(raw);
-        if(!m||+m[1]!==200){fin({why:m?'denied':'proto'});return}
-        stage=1;raw=raw.slice(i+4);
-        try{s.write('GET /json/?fields=status,query,country,countryCode HTTP/1.0\r\nHost: ip-api.com\r\nConnection: close\r\n\r\n')}catch(e){fin({why:'conn'})}
-        return;
-      }
-      if(raw.length>8000)fin({why:'geo'})});
-    s.on('close',()=>{
-      if(stage!==1||done)return;
-      const i=raw.indexOf('\r\n\r\n');let j=null;
-      try{j=JSON.parse(raw.slice(i+4))}catch(e){}
-      if(j&&j.status==='success'&&j.query)fin({ip:j.query,country:cleanLoc(j.country||''),cc:String(j.countryCode||'').toUpperCase()});
-      else fin({why:'geo'})})})}
+  const r=await e2eProbe(host,port,user,pass,proto==='http'?'http':'socks5',10000);
+  if(r.ms==null)return{why:r.why};
+  return{ip:r.ip,cc:r.cc,country:cleanLoc(ccName(r.cc))}}
 async function geoFill(g,host,port,user,pass,proto){
   if(!g||!g.ip)return g;
   if(!g.country){
@@ -404,6 +382,30 @@ async function fetchProxies(urls){const out=new Map();
       if(/^(10\.|192\.168\.|172\.(1[6-9]|2\d|3[01])\.|127\.)/.test(host))continue;
       out.set(host+':'+port,{host,port,user:m[1]||'',pass:m[2]||''})}}catch(e){}}
   return[...out.values()]}
+
+
+// ---------- diagnostics: Railway edge -> panel -> Xray ----------
+function wsProbe(o,to=7000){return new Promise(res=>{
+  const key=crypto.randomBytes(16).toString('base64'),t0=Date.now();let buf='',done=false,s=null;
+  const fin=(ok,msg)=>{if(done)return;done=true;clearTimeout(tm);try{s&&s.destroy()}catch(e){}res({ok,msg,ms:Date.now()-t0})};
+  const tm=setTimeout(()=>fin(false,'timeout'),to);
+  const send=()=>{try{s.write('GET '+o.path+' HTTP/1.1\r\nHost: '+o.hostHeader+'\r\nConnection: Upgrade\r\nUpgrade: websocket\r\nSec-WebSocket-Version: 13\r\nSec-WebSocket-Key: '+key+'\r\n\r\n')}catch(e){fin(false,'write')}};
+  try{s=o.tls?tls.connect({host:o.host,port:o.port,servername:o.host,ALPNProtocols:['http/1.1']},send):net.connect({host:o.host,port:o.port},send)}catch(e){fin(false,'conn');return}
+  s.on('error',e=>fin(false,e.code||e.message));
+  s.on('data',d=>{buf+=d.toString('latin1');const m=/^HTTP\/1\.[01] (\d{3})/.exec(buf);if(m)fin(m[1]==='101',m[1]==='101'?'101 Switching Protocols':'HTTP '+m[1])})})}
+async function runDiag(host){
+  const out=[],add=(k,ok,msg,hint)=>out.push({k,ok,msg:String(msg||'').slice(0,160),hint:hint||''});
+  const up=!!(xray&&xray.exitCode===null);
+  add('Xray',up&&!xrayErr,xrayErr||(up?'running':'not running'),(up&&!xrayErr)?'':'متن لاگ پایین رو برام بفرست');
+  try{const t0=Date.now(),r=await fetch('https://www.gstatic.com/generate_204',{signal:AbortSignal.timeout(8000)});add('Internet',r.status===204,'HTTP '+r.status+' · '+(Date.now()-t0)+'ms','')}
+  catch(e){add('Internet',false,e.message,'سرور به اینترنت وصل نیست (محدودیت پلن/شبکه)')}
+  const ibs=db.inbounds.filter(i=>i.on);
+  for(const i of ibs.slice(0,6)){const l=await wsProbe({host:'127.0.0.1',port:i.port,path:i.path,hostHeader:host});
+    add('Local · '+i.name,l.ok,l.msg,l.ok?'':'Xray روی این اینباند جواب نمی‌ده')}
+  if(ibs[0]){const p=await wsProbe({tls:true,host,port:443,path:ibs[0].path,hostHeader:host});
+    add('Public · '+host,p.ok,p.msg+' · '+p.ms+'ms',p.ok?'':'مسیر دامنه ← پنل ← Xray کار نمی‌کنه: پورت دامنه رو چک کن (باید با PORT یکی باشه)، یا پلتفرم WebSocket/پراکسی رو محدود کرده')}
+  const locs=db.locs||[];if(locs.length){const n=locs.filter(l=>l.on).length;add('Locations',n>0,n+' فعال از '+locs.length,'پروکسی‌های رایگان زود می‌میرن؛ لوکیشن مرده = خروج مستقیم از سرور')}
+  return{checks:out,log:xrayLog.slice(-12),host}}
 
 // ---------- loc health monitor (auto-disable dead proxies) ----------
 let lastLocCheck = 0;
@@ -441,7 +443,7 @@ const authed=req=>{const c=(req.headers.cookie||'').split(/;\s*/).find(x=>x.star
   const[e,s]=c.slice(3).split('.');return !!s&&+e>Date.now()&&crypto.timingSafeEqual(Buffer.from(sign(e)),Buffer.from(s.padEnd(64,'x').slice(0,64)))};
 const fails={};
 const secLog=[];const secPush=(ip,ok)=>{secLog.unshift({ip,t:Date.now(),ok:!!ok});if(secLog.length>60)secLog.length=60};
-const clientIp=req=>{const x=String(req.headers['x-forwarded-for']||'').split(',').map(v=>v.trim()).filter(Boolean);return String(x[0]||req.headers['x-real-ip']||req.socket.remoteAddress||'').replace(/^::ffff:/,'')};
+const clientIp=req=>{const x=String(req.headers['x-forwarded-for']||'').split(',').map(v=>v.trim()).filter(Boolean);return String(x[x.length-1]||req.headers['x-real-ip']||req.socket.remoteAddress||'').replace(/^::ffff:/,'')};
 // speed-test helpers (only for known active users or the logged-in admin)
 const SPBUF=crypto.randomBytes(65536),spQ={};
 const spOk=(ip,add)=>{const n=Date.now(),q=spQ[ip]||(spQ[ip]={b:0,t:n});if(n-q.t>60000){q.b=0;q.t=n}if(q.b+add>300e6)return false;q.b+=add;return true};
@@ -579,6 +581,7 @@ http.createServer(async(req,res)=>{
     if(u==='/api/update/apply'&&req.method==='POST'){try{const L=await applyUpdate();J(res,{ok:1,latest:L});restartApp();return}catch(e){return J(res,{e:e.message},500)}}
     if(u==='/api/scan'){if(!CF.length)return J(res,{e:'لیست ساب‌نت موجود نیست'},400);
       const sni=/^[\w.-]{3,100}$/.test(b.sni||'')?b.sni:'speed.cloudflare.com';return J(res,await scan(sni,Math.min(200,Math.max(10,+b.count||60))))}
+    if(u==='/api/diag')return J(res,await runDiag(effHost(req,h)));
     if(u==='/api/locs')return J(res,{locs:db.locs||[],sources:srcList(),defaults:DEFAULT_SOURCES,
       health:{on:db.settings.locHealth!==false,everyMin:Math.max(5,Math.min(720,+db.settings.locHealthMin||30)),checkedAt:lastLocCheck}});
     if(u==='/api/loc/add'){const host=String(b.host||'').trim().toLowerCase().replace(/^https?:\/\//,'').split(/[/:]/)[0];
@@ -614,6 +617,7 @@ http.createServer(async(req,res)=>{
       const fresh=all.filter(p=>!have.has(p.host+':'+p.port)).slice(0,150);
       const good=[];const q=fresh.slice();const fails={};
       await Promise.all(Array.from({length:15},async()=>{while(q.length&&good.length<max){const p=q.shift();const r=await detectProto(p.host,p.port,p.user,p.pass,6000);if(r.proto)good.push({...p,proto:r.proto,ms:r.ms});else fails[r.why||'conn']=(fails[r.why||'conn']||0)+1}}));
+      {const keep=[];await Promise.all(good.map(async g=>{const r=await detectProto(g.host,g.port,g.user,g.pass,7000);if(r.proto&&r.ms<6000){g.ms=Math.round((g.ms+r.ms)/2);g.proto=r.proto;keep.push(g)}}));good.length=0;good.push(...keep)}
       good.sort((x,y)=>x.ms-y.ms);
       db.locs=db.locs||[];
       const added=[];
