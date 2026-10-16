@@ -332,14 +332,24 @@ async function e2eProbe(host,port,user,pass,proto,to=10000){
   if(!c.sock)return{ms:null,why:c.why||'conn'};
   const sock=c.sock;sock.removeAllListeners('data');sock.removeAllListeners('timeout');sock.removeAllListeners('error');sock.on('error',()=>{});sock.setTimeout(0);
   return await new Promise(res=>{
-    let raw='',done=false,ts=null;
+    let raw='',done=false,ts=null,phase=1,ip='',cc='',total=0,t2=0;
     const fin=o=>{if(done)return;done=true;clearTimeout(tm);try{ts&&ts.destroy()}catch(e){}try{sock.destroy()}catch(e){}res(o)};
-    const tm=setTimeout(()=>fin({ms:null,why:'tls-timeout'}),Math.max(3000,to-(Date.now()-t0)));
+    const tm=setTimeout(()=>fin(phase===2&&ip?{ms:total,total,ip,cc}:{ms:null,why:'tls-timeout'}),Math.max(3500,to-(Date.now()-t0)));
+    const req=k=>'GET /cdn-cgi/trace HTTP/1.1\r\nHost: '+T+'\r\nConnection: '+k+'\r\nUser-Agent: BATAMN\r\n\r\n';
     try{ts=tls.connect({socket:sock,servername:T,rejectUnauthorized:!E2E_INSECURE,ALPNProtocols:['http/1.1']})}catch(e){fin({ms:null,why:'tls'});return}
-    ts.on('error',()=>fin({ms:null,why:'tls'}));
-    ts.on('secureConnect',()=>{try{ts.write('GET /cdn-cgi/trace HTTP/1.1\r\nHost: '+T+'\r\nConnection: close\r\nUser-Agent: BATAMN\r\n\r\n')}catch(e){fin({ms:null,why:'conn'})}});
-    ts.on('data',d=>{raw+=d.toString('utf8');const ip=/^ip=(\S+)/m.exec(raw),loc=/^loc=([A-Z]{2})/m.exec(raw);if(ip&&loc)fin({ms:Date.now()-t0,ip:ip[1],cc:loc[1]})});
-    ts.on('end',()=>fin({ms:null,why:'no-trace'}))})}
+    ts.on('error',()=>fin(phase===2&&ip?{ms:total,total,ip,cc}:{ms:null,why:'tls'}));
+    ts.on('secureConnect',()=>{try{ts.write(req('keep-alive'))}catch(e){fin({ms:null,why:'conn'})}});
+    ts.on('data',d=>{raw+=d.toString('utf8');
+      if(phase===1){const he=raw.indexOf('\r\n\r\n');if(he<0)return;
+        const cl=/content-length:\s*(\d+)/i.exec(raw.slice(0,he)),body=raw.slice(he+4);
+        const full=cl?Buffer.byteLength(body)>=+cl[1]:/\r\n0\r\n\r\n$/.test(raw);
+        if(!full)return;
+        const mi=/^ip=(\S+)/m.exec(body),ml=/^loc=([A-Z]{2})/m.exec(body);
+        if(!mi||!ml){fin({ms:null,why:'no-trace'});return}
+        ip=mi[1];cc=ml[1];total=Date.now()-t0;phase=2;raw='';t2=Date.now();
+        try{ts.write(req('close'))}catch(e){fin({ms:total,total,ip,cc})}
+      }else if(/^HTTP\/1\.[01] \d{3}/.test(raw)){fin({ms:Date.now()-t2,total,ip,cc})}});
+    ts.on('end',()=>fin(phase===2&&ip?{ms:total,total,ip,cc}:{ms:null,why:'no-trace'}))})}
 const socksTest=(h,p,u,pw,to=8000)=>e2eProbe(h,p,u,pw,'socks5',to).then(r=>({ms:r.ms,why:r.why}));
 const httpTest=(h,p,u,pw,to=8000)=>e2eProbe(h,p,u,pw,'http',to).then(r=>({ms:r.ms,why:r.why}));
 async function detectProto(host,port,user,pass,to=9000){
@@ -374,11 +384,16 @@ async function geoFill(g,host,port,user,pass,proto){
     try{const gj=await geoIP(g.ip);if(gj){g.country=gj.country;g.cc=gj.cc}}catch(e){}
   }
   return g}
+const tcpPing=(host,port,to=1800)=>new Promise(res=>{const t0=Date.now();let d=false;let s;
+  const f=v=>{if(!d){d=true;try{s&&s.destroy()}catch(e){}res(v)}};
+  try{s=net.connect({host,port:+port})}catch(e){return f(null)}
+  s.setTimeout(to,()=>f(null));s.on('connect',()=>f(Date.now()-t0));s.on('error',()=>f(null))});
+const shuffle=a=>{for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[a[i],a[j]]=[a[j],a[i]]}return a};
 async function fetchProxies(urls){const out=new Map();
   for(const u of urls){try{const r=await fetch(u,{headers:{'User-Agent':'BATAMN'},signal:AbortSignal.timeout(25000)});if(!r.ok)continue;
     const t=await r.text();
     const re=/(?:([A-Za-z0-9._~%!$&'()*+,;=-]{1,64}):([^@\s:]{1,64})@)?(\d{1,3}(?:\.\d{1,3}){3}|[a-zA-Z0-9.-]{2,253}):(\d{2,5})/g;let m;
-    while((m=re.exec(t))&&out.size<3000){const host=m[3],port=+m[4];if(!host||port<1||port>65535)continue;
+    while((m=re.exec(t))&&out.size<20000){const host=m[3],port=+m[4];if(!host||port<1||port>65535)continue;
       if(/^(10\.|192\.168\.|172\.(1[6-9]|2\d|3[01])\.|127\.)/.test(host))continue;
       out.set(host+':'+port,{host,port,user:m[1]||'',pass:m[2]||''})}}catch(e){}}
   return[...out.values()]}
@@ -610,23 +625,36 @@ http.createServer(async(req,res)=>{
       if(g&&g.ip){l.egress=g.ip;l.country=g.country||'';l.cc=g.cc||'';
         if(/^🌐 [\d.]/.test(l.label||''))l.label=ccFlag(g.cc)+' '+(g.country||l.host)}
       save();return J(res,{ok:1,ms:l.ms,proto:l.proto,why:null,egress:l.egress||null,country:l.country||null,cc:l.cc||null})}
-    if(u==='/api/loc/fetch'){const urls=(Array.isArray(b.urls)&&b.urls.length?b.urls:srcList()).slice(0,10);
-      const max=Math.min(30,Math.max(1,Math.floor(+b.max||10)));
+    if(u==='/api/loc/fetch'){
+      // 3 stages: (A) cheap TCP ping to thousands of random candidates, (B) real end-to-end probe for the closest ones, (C) re-check the winners
+      const T0=Date.now(),dl=T0+65000;
+      const cc=(Array.isArray(b.countries)?b.countries:String(b.countries||'').split(/[\s,;]+/)).map(x=>String(x).trim().toUpperCase()).filter(x=>/^[A-Z]{2}$/.test(x)).slice(0,6);
+      const urls=cc.length?cc.map(c=>'https://cdn.jsdelivr.net/gh/proxifly/free-proxy-list@main/proxies/countries/'+c+'/data.txt'):(Array.isArray(b.urls)&&b.urls.length?b.urls:srcList()).slice(0,10);
+      const clamp=(v,lo,hi,d)=>Math.min(hi,Math.max(lo,Math.floor(+v||d)));
+      const max=clamp(b.max,1,30,10),maxMs=clamp(b.maxMs,150,5000,800),tries=clamp(b.tries,100,1500,700);
       const all=await fetchProxies(urls);
       const have=new Set((db.locs||[]).map(l=>l.host+':'+l.port));
-      const fresh=all.filter(p=>!have.has(p.host+':'+p.port)).slice(0,150);
-      const good=[];const q=fresh.slice();const fails={};
-      await Promise.all(Array.from({length:15},async()=>{while(q.length&&good.length<max){const p=q.shift();const r=await detectProto(p.host,p.port,p.user,p.pass,6000);if(r.proto)good.push({...p,proto:r.proto,ms:r.ms});else fails[r.why||'conn']=(fails[r.why||'conn']||0)+1}}));
-      {const keep=[];await Promise.all(good.map(async g=>{const r=await detectProto(g.host,g.port,g.user,g.pass,7000);if(r.proto&&r.ms<6000){g.ms=Math.round((g.ms+r.ms)/2);g.proto=r.proto;keep.push(g)}}));good.length=0;good.push(...keep)}
+      const fresh=shuffle(all.filter(p=>!have.has(p.host+':'+p.port))).slice(0,tries);
+      const A=[];{const q=fresh.slice(),endA=T0+22000;
+        await Promise.all(Array.from({length:150},async()=>{while(q.length&&Date.now()<endA){const p=q.shift();const ms=await tcpPing(p.host,p.port,1800);if(ms!=null)A.push({...p,tcp:ms})}}))}
+      A.sort((x,y)=>x.tcp-y.tcp);
+      const good=[],fails={};{const q=A.slice(0,70);
+        await Promise.all(Array.from({length:20},async()=>{while(q.length&&Date.now()<dl-14000){const p=q.shift();const r=await detectProto(p.host,p.port,p.user,p.pass,6000);
+          if(r.proto&&r.ms<=maxMs)good.push({...p,proto:r.proto,ms:r.ms,ip:r.ip,cc:r.cc});
+          else{const k=r.proto?'slow':(r.why||'conn');fails[k]=(fails[k]||0)+1}}}))}
       good.sort((x,y)=>x.ms-y.ms);
-      db.locs=db.locs||[];
-      const added=[];
-      for(const g of good){if(db.locs.length>=100)break;const nl={id:'L'+Date.now().toString(36)+Math.floor(Math.random()*99),label:'🌐 '+g.host,on:true,host:g.host,port:g.port,user:g.user,pass:g.pass,proto:g.proto,ms:g.ms,at:Date.now()};db.locs.push(nl);added.push(nl)}
-      const aq=added.slice();
-      await Promise.all(Array.from({length:5},async()=>{while(aq.length){const l=aq.shift();
-        try{const g=await geoFill(await socksEgress(l.host,l.port,l.user,l.pass,l.proto),l.host,l.port,l.user,l.pass,l.proto);
-          if(g&&g.ip){l.egress=g.ip;l.country=g.country||'';l.cc=g.cc||'';l.label=ccFlag(g.cc)+' '+(g.country||l.host)}}catch(e){}}}));
-      save();restartSoon();return J(res,{ok:1,tested:all.length,checked:fresh.length,added:added.length,fails,list:added.slice(0,20).map(l=>({host:l.host,port:l.port,proto:l.proto,ms:l.ms,country:l.country||'',cc:l.cc||'',egress:l.egress||''}))})}
+      const keep=[];{const top=good.slice(0,Math.min(good.length,max*2));
+        await Promise.all(top.map(async g=>{const r=await detectProto(g.host,g.port,g.user,g.pass,7000);
+          if(r.proto&&r.ms<=maxMs*1.3){g.ms=Math.round((g.ms+r.ms)/2);g.proto=r.proto;if(r.cc){g.cc=r.cc;g.ip=r.ip}keep.push(g)}else fails.unstable=(fails.unstable||0)+1}))}
+      keep.sort((x,y)=>x.ms-y.ms);
+      db.locs=db.locs||[];const added=[];
+      for(const g of keep.slice(0,max)){if(db.locs.length>=100)break;
+        const country=g.cc?cleanLoc(ccName(g.cc)):'';
+        const nl={id:'L'+Date.now().toString(36)+Math.floor(Math.random()*99),label:g.cc?(ccFlag(g.cc)+' '+(country||g.host)):'🌐 '+g.host,on:true,host:g.host,port:g.port,user:g.user,pass:g.pass,proto:g.proto,ms:g.ms,at:Date.now(),egress:g.ip||'',country,cc:g.cc||''};
+        db.locs.push(nl);added.push(nl)}
+      save();restartSoon();
+      return J(res,{ok:1,tested:all.length,checked:fresh.length,reachable:A.length,probed:Math.min(A.length,70),added:added.length,maxMs,secs:Math.round((Date.now()-T0)/1000),fails,
+        list:added.slice(0,30).map(l=>({host:l.host,port:l.port,proto:l.proto,ms:l.ms,country:l.country||'',cc:l.cc||'',egress:l.egress||''}))})}
     if(u==='/api/loc/inbound'){const l=(db.locs||[]).find(v=>v.id===b.id);if(!l)return J(res,{e:'لوکیشن پیدا نشد'},404);
       let pth,n=0;do{pth='/'+Math.random().toString(36).slice(2,9);n++}while(db.inbounds.some(i=>i.path===pth)&&n<20);
       if(db.inbounds.some(i=>i.path===pth))return J(res,{e:'مسیر تکراری شد، دوباره بزن'},400);
