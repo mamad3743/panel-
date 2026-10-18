@@ -98,7 +98,7 @@ function buildCfg(){
   return{log:{loglevel:'warning',access:ACC},api:{tag:'api',services:['StatsService']},stats:{},
     dns:{servers:['1.1.1.1','8.8.8.8'],queryStrategy:'UseIPv4'},
     policy:{levels:{0:{handshake:4,connIdle:300,statsUserUplink:true,statsUserDownlink:true}}},
-    routing:{rules:[...blockRules(),...locRules(),{type:'field',inboundTag:['api'],outboundTag:'api'}]},
+    routing:{rules:[{type:'field',inboundTag:['api'],outboundTag:'api'},...blockRules(),{type:'field',domain:['full:localhost','domain:railway.internal','domain:internal','domain:local'],outboundTag:'block'},{type:'field',ip:['0.0.0.0/8','10.0.0.0/8','100.64.0.0/10','127.0.0.0/8','169.254.0.0/16','172.16.0.0/12','192.168.0.0/16','::1/128','fc00::/7','fe80::/10'],outboundTag:'block'},...locRules()]},
     inbounds:inb,outbounds:[{protocol:'freedom',settings:{domainStrategy:'UseIPv4'}},...locOutbounds(),{protocol:'blackhole',tag:'block'}]};
 }
 function startXray(force){
@@ -196,7 +196,7 @@ setInterval(async()=>{
       if(!cid||!txt.startsWith('/start'))continue;
       const q=txt.split(/\s+/)[1]||'';
       const user=db.users.find(v=>v.id===q||v.id.startsWith(q));
-      const t=user?('📊 اشتراک '+user.name+'\nوضعیت: '+status(user)+'\nمصرف: '+Math.round(user.used/1048576)+'MB / '+(user.limit?Math.round(user.limit/1073741824)+'GB':'∞')+(user.exp?'\nانقضا: '+new Date(user.exp).toLocaleDateString('fa-IR'):'')):'سلام! آیدی اشتراکت رو بعد از /start بفرست.\nمثال: /start a1b2c3d4';
+      const t=user?('اشتراک '+user.name+'\nوضعیت: '+status(user)+'\nمصرف: '+Math.round(user.used/1048576)+'MB / '+(user.limit?Math.round(user.limit/1073741824)+'GB':'∞')+(user.exp?'\nانقضا: '+new Date(user.exp).toLocaleDateString('fa-IR'):'')):'سلام! آیدی اشتراکت رو بعد از /start بفرست.\nمثال: /start a1b2c3d4';
       await botCall('sendMessage',{chat_id:cid,text:t}).catch(()=>{});
     }
   }catch(e){}botBusy=false;
@@ -204,19 +204,69 @@ setInterval(async()=>{
 
 // ---------- links ----------
 const cleanAddr=a=>a&&/^[\w.\-:\[\]]{1,100}$/.test(a)?a:'';
-const cleanLoc=s=>String(s||'').replace(/[\u0000-\u001F\u007F<>\"']/g,'').trim().slice(0,24);
+const stripEmoji=s=>String(s==null?'':s).replace(/[\u{1F300}-\u{1FAFF}\u{1F1E6}-\u{1F1FF}\u{2600}-\u{27BF}\u{2B50}\u{2B06}\u{2B55}\u{231A}\u{231B}\u{23E9}-\u{23FA}\u{FE0F}\u{200D}]/gu,'');
+const cleanLoc=s=>stripEmoji(s).replace(/[\u0000-\u001F\u007F<>"']/g,'').replace(/\s{2,}/g,' ').trim().slice(0,24);
+// ---------- config names: only the location (flag + country name), no brand, no protocol ----------
+const keepName=s=>String(s==null?'':s).replace(/[\u0000-\u001F\u007F<>"']/g,'').replace(/\s{2,}/g,' ').trim().slice(0,40);
+const flagOf=cc=>{try{return String.fromCodePoint(cc.charCodeAt(0)+127397,cc.charCodeAt(1)+127397)}catch(e){return''}};
+const regionEn=cc=>{try{return new Intl.DisplayNames(['en'],{type:'region'}).of(cc)||''}catch(e){return''}};
+// Unicode "fonts" for config names (letters only; flags, digits fallbacks and non-latin text stay as typed)
+const STYLE_OFFS={bold:[0x1D5D4,0x1D5EE,0x1D7EC],script:[0x1D4D0,0x1D4EA,null],mono:[0x1D670,0x1D68A,0x1D7F6],double:[0x1D538,0x1D552,0x1D7D8]};
+const DBL_EXC={C:'\u2102',H:'\u210D',N:'\u2115',P:'\u2119',Q:'\u211A',R:'\u211D',Z:'\u2124'};
+const SMALLCAPS='\u1D00\u0299\u1D04\u1D05\u1D07\uA730\u0262\u029C\u026A\u1D0A\u1D0B\u029F\u1D0D\u0274\u1D0F\u1D18\u01EB\u0280\uA731\u1D1B\u1D1C\u1D20\u1D21x\u028F\u1D22';
+const NAME_STYLES=['bold','smallcaps','script','double','mono','plain'];
+function styleText(t,st){st=st||db.settings.nameStyle||'bold';t=String(t||'');if(st==='plain'||!NAME_STYLES.includes(st))return t;
+  let out='';for(const ch of t){const c=ch.charCodeAt(0);let r=ch;
+    if(st==='smallcaps'){if(c>=97&&c<=122)r=SMALLCAPS[c-97];else if(c>=65&&c<=90)r=SMALLCAPS[c-65]}
+    else{const o=STYLE_OFFS[st];
+      if(c>=65&&c<=90){r=(st==='double'&&DBL_EXC[ch])?DBL_EXC[ch]:String.fromCodePoint(o[0]+c-65)}
+      else if(c>=97&&c<=122)r=String.fromCodePoint(o[1]+c-97);
+      else if(c>=48&&c<=57&&o[2])r=String.fromCodePoint(o[2]+c-48)}
+    out+=r}
+  return out}
+const locText=(cc,fb)=>{cc=String(cc||'').toUpperCase();return /^[A-Z]{2}$/.test(cc)?(flagOf(cc)+' '+(regionEn(cc)||fb||cc)):(fb||'')};
+let SRV_CC='';
+async function detectServerCC(){
+  try{const r=await fetch('https://www.cloudflare.com/cdn-cgi/trace',{signal:AbortSignal.timeout(8000)});const m=/^loc=([A-Z]{2})/m.exec(await r.text());if(m)SRV_CC=m[1]}catch(e){}
+  if(!SRV_CC){const rg=String(process.env.RAILWAY_REPLICA_REGION||process.env.RAILWAY_REGION||'');const map={'europe-west4':'NL','us-west2':'US','us-east4':'US','asia-southeast1':'SG'};for(const k in map)if(rg.startsWith(k)){SRV_CC=map[k];break}}}
+detectServerCC();setInterval(detectServerCC,3600e3);
+const autoLoc=()=>keepName(db.settings.locName)||locText(SRV_CC,'');
 function linksFor(u,h,addr){
   const a=addr||db.settings.addr||h,q='security=tls&sni='+h+'&fp=chrome&alpn=http%2F1.1&host='+h;
-  return db.inbounds.filter(i=>i.on).map(i=>{
+  const ibs=db.inbounds.filter(i=>i.on),cnt={};
+  const names=ibs.map(i=>{
+    const egL=(db.locs||[]).find(x=>x.id===i.egress&&x.on);
+    const auto=egL&&[egL.label,egL.country,egL.host].some(v=>v&&cleanLoc(v)===cleanLoc(i.loc));   // loc auto-filled from the proxy label is not a manual name
+    let n=(!auto&&keepName(i.loc))||'';
+    if(!n&&egL)n=/^[A-Z]{2}$/.test(egL.cc||'')?locText(egL.cc,egL.country):keepName(egL.label||egL.host);
+    if(!n)n=autoLoc()||stripEmoji(i.name).replace(/\s*·\s*/g,'-')||'Server';
+    cnt[n]=(cnt[n]||0)+1;return styleText(cnt[n]>1?n+' '+cnt[n]:n)});
+  return ibs.map((i,ix)=>{
     const loc=cleanLoc(i.loc);
     const egL=(db.locs||[]).find(x=>x.id===i.egress&&x.on),eg=egL?(egL.label||(egL.host+':'+egL.port)):'';
-    const egTag=(egL&&/^[A-Z]{2}$/.test(egL.cc||''))?(ccFlag(egL.cc)+' '+(egL.country||'')).trim():'';
-    const tag=(loc||egTag||i.name.replace(/\s*·\s*/g,'-')).slice(0,30);
-    const nm='BATAMN-'+u.name+'-'+tag,p=encodeURIComponent(i.path);
+    const nm=names[ix],p=encodeURIComponent(i.path);
     let l;    if(i.proto==='vmess')l='vmess://'+Buffer.from(JSON.stringify({v:'2',ps:nm,add:a,port:'443',id:u.id,aid:'0',scy:'auto',net:i.net,type:'none',host:h,path:i.path,tls:'tls',sni:h,alpn:'http/1.1',fp:'chrome'})).toString('base64');
     else if(i.proto==='trojan')l='trojan://'+u.id+'@'+a+':443?'+q+'&type='+i.net+'&path='+p+'#'+encodeURIComponent(nm);
     else l='vless://'+u.id+'@'+a+':443?encryption=none&'+q+'&type='+i.net+'&path='+p+'#'+encodeURIComponent(nm);
     return{k:i.id,n:i.name,loc:loc,eg:eg,l};});
+}
+// ---------- info "configs" shown at the top of the subscription (usage / plan / days left); they are dummies, not real tunnels ----------
+const subInfoOn=()=>db.settings.subInfo!==false;
+const gbTxt=n=>{const g=n/1073741824;return (g>=10?g.toFixed(0):Number(g.toFixed(2)).toString())+' GB'};
+const fmtUsed=n=>{n=+n||0;if(n<1048576)return '0 MB';const u=['B','KB','MB','GB','TB'];let i=0;while(n>=1024&&i<4){n/=1024;i++}return (i>=3?n.toFixed(2):n.toFixed(0))+' '+u[i]};
+function infoLinks(x,st){
+  const T=[],days=x.exp?Math.ceil((x.exp-Date.now())/864e5):null,plan=(x.exp&&x.created)?Math.max(1,Math.round((x.exp-x.created)/864e5)):null,c=contact();
+  if(st==='active'){
+    T.push('📦 '+(x.limit?gbTxt(x.limit):'Unlimited')+' · '+(plan?plan+' Days':'No Expiry'));
+    T.push('📊 Used '+fmtUsed(x.used)+(x.limit?' · Left '+gbTxt(Math.max(0,x.limit-x.used)):''));
+    T.push('⏳ '+(days==null?'Unlimited Time':Math.max(0,days)+' Days Left'));
+    if(x.maxDev)T.push('👥 Devices '+onlineOf(x.id).length+'/'+x.maxDev);
+  }else{
+    T.push(st==='expired'?'⛔ Expired':st==='limited'?'⛔ Data Finished':'⛔ Disabled');
+    T.push('📊 Used '+fmtUsed(x.used)+(x.limit?' / '+gbTxt(x.limit):''));
+    if(c.support)T.push('💬 Support @'+c.support);
+  }
+  return T.map(t=>'vless://00000000-0000-0000-0000-000000000000@127.0.0.1:1?encryption=none&security=none&type=tcp#'+encodeURIComponent(styleText(t)));
 }
 function qrSvg(t){
   if(!qrlib)return '';
@@ -267,7 +317,7 @@ async function scan(sni,count){
 }
 
 // ---------- socks locations (multi-location egress) ----------
-const DEFAULT_SOURCES=['https://cdn.jsdelivr.net/gh/proxifly/free-proxy-list@main/proxies/protocols/socks5/data.txt','https://cdn.jsdelivr.net/gh/proxyscrape/free-proxy-list@main/proxies/protocols/socks5/data.txt','https://raw.githubusercontent.com/ClearProxy/checked-proxy-list/main/socks5/raw/all.txt'];
+const DEFAULT_SOURCES=['https://raw.githubusercontent.com/monosans/proxy-list/main/proxies/socks5.txt','https://cdn.jsdelivr.net/gh/proxifly/free-proxy-list@main/proxies/protocols/socks5/data.txt','https://raw.githubusercontent.com/zloi-user/hideip.me/main/socks5.txt','https://raw.githubusercontent.com/jetkai/proxy-list/main/online-proxies/txt/proxies-socks5.txt','https://cdn.jsdelivr.net/gh/proxyscrape/free-proxy-list@main/proxies/protocols/socks5/data.txt'];
 const srcList=()=>Array.isArray(db.settings.sources)&&db.settings.sources.length?db.settings.sources:DEFAULT_SOURCES;
 function socksConn(host,port,user,pass,th,tp,to=8000){return new Promise(res=>{
   const t0=Date.now();
@@ -350,8 +400,8 @@ async function e2eProbe(host,port,user,pass,proto,to=10000){
         try{ts.write(req('close'))}catch(e){fin({ms:total,total,ip,cc})}
       }else if(/^HTTP\/1\.[01] \d{3}/.test(raw)){fin({ms:Date.now()-t2,total,ip,cc})}});
     ts.on('end',()=>fin(phase===2&&ip?{ms:total,total,ip,cc}:{ms:null,why:'no-trace'}))})}
-const socksTest=(h,p,u,pw,to=8000)=>e2eProbe(h,p,u,pw,'socks5',to).then(r=>({ms:r.ms,why:r.why}));
-const httpTest=(h,p,u,pw,to=8000)=>e2eProbe(h,p,u,pw,'http',to).then(r=>({ms:r.ms,why:r.why}));
+const socksTest=(h,p,u,pw,to=8000)=>e2eProbe(h,p,u,pw,'socks5',to).then(r=>({ms:r.ms,why:r.why,ip:r.ip,cc:r.cc}));
+const httpTest=(h,p,u,pw,to=8000)=>e2eProbe(h,p,u,pw,'http',to).then(r=>({ms:r.ms,why:r.why,ip:r.ip,cc:r.cc}));
 async function detectProto(host,port,user,pass,to=9000){
   const out=await Promise.all([e2eProbe(host,port,user,pass,'socks5',to),e2eProbe(host,port,user,pass,'http',to)]);
   const ok=[out[0].ms!=null?{proto:'socks5',...out[0]}:null,out[1].ms!=null?{proto:'http',...out[1]}:null].filter(Boolean).sort((a,b)=>a.ms-b.ms);
@@ -373,7 +423,7 @@ async function geoIP(ip){
     }catch(e){}
   }
   return null}
-const ccFlag=cc=>{cc=String(cc||'').toUpperCase();if(!/^[A-Z]{2}$/.test(cc))return'🌐';try{return String.fromCodePoint(cc.charCodeAt(0)+127397,cc.charCodeAt(1)+127397)}catch(e){return'🌐'}};
+const ccFlag=cc=>{cc=String(cc||'').toUpperCase();return /^[A-Z]{2}$/.test(cc)?'['+cc+']':''};
 async function socksEgress(host,port,user,pass,proto){
   const r=await e2eProbe(host,port,user,pass,proto==='http'?'http':'socks5',10000);
   if(r.ms==null)return{why:r.why};
@@ -475,6 +525,67 @@ const esc=s=>String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;'
 const cleanName=s=>String(s||'user').slice(0,30).replace(/[^\w\u0600-\u06FF -]/g,'').trim()||'user';
 const pubUser=(u,h,addr,withLinks)=>({days:dates14().map(d=>(u.days||{})[d]||0),maxDev:u.maxDev||0,online:onlineOf(u.id).length,id:u.id,name:u.name,on:u.on,created:u.created,limit:u.limit,exp:u.exp,used:u.used,note:u.note,status:status(u),...(withLinks?{links:linksFor(u,h,addr)}:{})});
 
+// ---------- SSH over WebSocket (payload mode): per-user accounts, byte accounting, device limit, private-network block ----------
+let ssh2=null;try{ssh2=require('ssh2')}catch(e){console.log('[ssh] ssh2 module not installed: SSH disabled')}
+const dnsP=require('dns').promises;
+const PRIV=new net.BlockList();
+[['0.0.0.0',8],['10.0.0.0',8],['100.64.0.0',10],['127.0.0.0',8],['169.254.0.0',16],['172.16.0.0',12],['192.168.0.0',16],['224.0.0.0',4],['240.0.0.0',4]].forEach(([a,p])=>PRIV.addSubnet(a,p,'ipv4'));
+[['::1',128],['fc00::',7],['fe80::',10],['ff00::',8]].forEach(([a,p])=>PRIV.addSubnet(a,p,'ipv6'));
+const isPriv=a=>{try{return PRIV.check(a,net.isIPv6(a)?'ipv6':'ipv4')}catch(e){return true}};
+const sshOn=()=>!!(ssh2&&db.settings.sshOn);
+function ensureSsh(){let ch=false;const used=new Set(db.users.filter(u=>u.ssh&&u.ssh.user).map(u=>u.ssh.user));
+  for(const u of db.users){if(u.ssh&&u.ssh.user&&u.ssh.pass)continue;let nm;do nm='u'+crypto.randomBytes(3).toString('hex');while(used.has(nm));used.add(nm);u.ssh={user:nm,pass:crypto.randomBytes(7).toString('base64url')};ch=true}
+  if(ch)save()}
+const eqs=(a,b)=>{const x=Buffer.from(String(a)),y=Buffer.from(String(b));return x.length===y.length&&crypto.timingSafeEqual(x,y)};
+function sshHostKey(){const f=path.join(DIR,'ssh_host_rsa.pem');try{return fs.readFileSync(f,'utf8')}catch(e){}
+  const k=crypto.generateKeyPairSync('rsa',{modulusLength:2048,publicKeyEncoding:{type:'spki',format:'pem'},privateKeyEncoding:{type:'pkcs1',format:'pem'}}).privateKey;
+  try{fs.writeFileSync(f,k,{mode:0o600})}catch(e){}return k}
+const sshPend=new Map(),sshF={};
+const sshAcc=(u,n)=>sshPend.set(u.id,(sshPend.get(u.id)||0)+n);
+setInterval(()=>{let ch=false;for(const[id,n]of sshPend){const u=db.users.find(x=>x.id===id);if(u){u.used+=n;addTraffic(u,n);ch=true}}sshPend.clear();if(ch)save()},3000);
+function devOk(u,ip){if(!u.maxDev)return true;const k=ipKey(ip).key,on=onlineOf(u.id).sort((a,b)=>a.first-b.first);return on.length<u.maxDev||on.slice(0,u.maxDev).some(e=>e.ip===k)}
+const sshBlocked=ip=>{const f=sshF[ip];return !!f&&Date.now()-f.t<600000&&f.n>=10};
+function sshFail(ip){const f=sshF[ip]&&Date.now()-sshF[ip].t<600000?sshF[ip]:(sshF[ip]={n:0,t:Date.now()});f.n++}
+async function sshTunnel(u,ip,accept,reject,i){
+  try{
+    const port=+i.destPort;if(!isActive(u)||!(port>0&&port<65536)||port===25)return reject();
+    let addr=String(i.destIP||'');if(!net.isIP(addr))addr=(await dnsP.lookup(addr,{family:4})).address;
+    if(isPriv(addr))return reject();
+    const s=net.connect({host:addr,port});let done=false;s.setNoDelay(true);s.setTimeout(15000,()=>{if(!done)s.destroy()});
+    s.once('error',()=>{if(!done){done=true;try{reject()}catch(e){}}});
+    s.once('connect',()=>{if(done)return;done=true;s.setTimeout(0);
+      const ch=accept();if(!ch){s.destroy();return}
+      const end=()=>{try{ch.close()}catch(e){}s.destroy()};
+      const cnt=n=>{sshAcc(u,n);if(!isActive(u))end()};
+      ch.on('data',d=>cnt(d.length));s.on('data',d=>cnt(d.length));
+      ch.pipe(s);s.pipe(ch);ch.on('close',end);ch.on('error',end);s.on('close',end);s.on('error',end)})
+  }catch(e){try{reject()}catch(_){}}}
+let sshSrv=null;
+function sshInit(){if(!ssh2||sshSrv)return;try{
+  sshSrv=new ssh2.Server({hostKeys:[sshHostKey()],banner:'BATAMN'},(client,info)=>{
+    const ip=String(info&&info.ip||'');let u=null,tm=null;
+    client.on('error',()=>{});client.on('close',()=>clearInterval(tm));
+    client.on('authentication',ctx=>{
+      if(ctx.method!=='password')return ctx.reject(['password']);
+      if(sshBlocked(ip)){try{client.end()}catch(e){}return ctx.reject([])}
+      const x=sshOn()?db.users.find(v=>v.ssh&&eqs(v.ssh.user,ctx.username)):null;
+      if(!x||!eqs(x.ssh.pass,ctx.password)||!isActive(x)||!devOk(x,ip)){sshFail(ip);return ctx.reject(['password'])}
+      u=x;ctx.accept()});
+    client.on('ready',()=>{seen(u.id,ip);tm=setInterval(()=>seen(u.id,ip),30000);
+      client.on('session',(accept,reject)=>reject());
+      client.on('tcpip',(accept,reject,i)=>sshTunnel(u,ip,accept,reject,i))});
+  })}catch(e){console.log('[ssh] init failed:',e.message);sshSrv=null}}
+const sshWant=req=>!!(sshSrv&&sshOn()&&/^\/(?:ssh)?(?:\?.*)?$/.test(req.url));
+function sshAttach(req,sock,head){
+  const key=req.headers['sec-websocket-key'];
+  let r='HTTP/1.1 101 Switching Protocols\r\nUpgrade: websocket\r\nConnection: Upgrade\r\n';
+  if(key)r+='Sec-WebSocket-Accept: '+crypto.createHash('sha1').update(key+'258EAFA5-E914-47DA-95CA-C5AB0DC85B11').digest('base64')+'\r\n';
+  sock.on('error',()=>{});sock.setNoDelay(true);sock.setKeepAlive(true,30000);sock.setTimeout(0);
+  try{Object.defineProperty(sock,'remoteAddress',{value:clientIp(req),configurable:true});Object.defineProperty(sock,'remotePort',{value:0,configurable:true})}catch(e){}
+  sock.write(r+'\r\n');if(head&&head.length)sock.unshift(head);
+  try{sshSrv.injectSocket(sock)}catch(e){sock.destroy()}}
+if(db.settings.sshOn){ensureSsh();sshInit()}
+
 http.createServer(async(req,res)=>{
   const U=new URL(req.url,'http://x'),u=U.pathname,h=hostOf(req),addr=cleanAddr(U.searchParams.get('addr'));
   if(FILES[u]&&req.method==='GET'){const bufr=u==='/'?Buffer.from(FILES[u].toString().replace('__THEME__','gotham')):FILES[u];return res.writeHead(200,{'content-type':STATIC[u][1],'cache-control':u==='/bg.svg'?'public,max-age=86400':'no-cache'}),res.end(bufr)}
@@ -503,14 +614,14 @@ http.createServer(async(req,res)=>{
     if(!x){res.writeHead(404,{'content-type':'text/plain'});return res.end('Not found')}
     const hh=effHost(req,h),st=status(x),L=st==='active'?linksFor(x,hh,addr):[];
     if(!html){
-      if(st!=='active'){res.writeHead(403,{'content-type':'text/plain'});return res.end(st)}
-      res.writeHead(200,{'content-type':'text/plain; charset=utf-8','profile-title':'BATAMN','profile-update-interval':'12',...(contact().support?{'support-url':'https://t.me/'+contact().support}:{}),...(contact().channel?{'profile-web-page-url':'https://t.me/'+contact().channel}:{}),
+      if(st!=='active'&&!subInfoOn()){res.writeHead(403,{'content-type':'text/plain'});return res.end(st)}
+      res.writeHead(200,{'content-type':'text/plain; charset=utf-8','profile-title':'BATAMN','profile-update-interval':'1',...(contact().support?{'support-url':'https://t.me/'+contact().support}:{}),...(contact().channel?{'profile-web-page-url':'https://t.me/'+contact().channel}:{}),
         'subscription-userinfo':'upload=0; download='+x.used+'; total='+x.limit+'; expire='+(x.exp?Math.floor(x.exp/1000):0)});
-      return res.end(Buffer.from(L.map(i=>i.l).join('\n')).toString('base64'));
+      return res.end(Buffer.from((subInfoOn()?infoLinks(x,st):[]).concat(L.map(i=>i.l)).join('\n')).toString('base64'));
     }
     const subUrl='https://'+hh+'/sub/'+x.id+(addr?'?addr='+encodeURIComponent(addr):'');
     const fb=cleanHost(db.settings.fallback)||'';
-    const data={id:x.id,online:onlineOf(x.id).length,maxDev:x.maxDev||0,contact:contact(),sub:subUrl,host:hh,fallback:fb,altSub:fb?'https://'+fb+'/sub/'+x.id+(addr?'?addr='+encodeURIComponent(addr):''):null,pay:{card:String(db.settings.payCard||'').slice(0,32),url:String(db.settings.payUrl||'').slice(0,200)},bot:cleanTg(db.settings.botUser||''),status:st,used:x.used,limit:x.limit,exp:x.exp,created:x.created,days:dates14().map(d=>((x.days||{})[d]||0)),links:L.map(i=>({n:i.n,loc:i.loc||'',eg:i.eg||'',l:i.l,qr:qrSvg(i.l)}))};
+    const data={ssh:(sshOn()&&(ensureSsh(),x.ssh)&&st==='active')?{user:x.ssh.user,pass:x.ssh.pass,host:addr||db.settings.addr||hh,sni:hh,port:443}:null,id:x.id,online:onlineOf(x.id).length,maxDev:x.maxDev||0,contact:contact(),sub:subUrl,host:hh,fallback:fb,altSub:fb?'https://'+fb+'/sub/'+x.id+(addr?'?addr='+encodeURIComponent(addr):''):null,pay:{card:String(db.settings.payCard||'').slice(0,32),url:String(db.settings.payUrl||'').slice(0,200)},bot:cleanTg(db.settings.botUser||''),status:st,used:x.used,limit:x.limit,exp:x.exp,created:x.created,days:dates14().map(d=>((x.days||{})[d]||0)),links:L.map(i=>({n:i.n,loc:i.loc||'',eg:i.eg||'',l:i.l,qr:qrSvg(i.l)}))};
     const page=SUB.replace('__THEME__','gotham').replace(/__NAME__/g,()=>esc(x.name)).replace('__QR__',()=>st==='active'?qrSvg(subUrl):'').replace('__DATA__',()=>JSON.stringify(data).replace(/</g,'\\u003c'));
     return res.writeHead(200,{'content-type':'text/html; charset=utf-8','cache-control':'no-store'}),res.end(page);
   }
@@ -530,9 +641,9 @@ http.createServer(async(req,res)=>{
     if(u==='/api/sys')return J(res,{cpu:cpuPct,cores:+cpuCores.toFixed(1),mem:memInfo(),disk:diskInfo(),net:{rx:NS.rx,tx:NS.tx,rxs:NS.rxs,txs:NS.txs},
       pup:process.uptime(),load:os.loadavg(),conns,online:onlineSummary(),region:process.env.RAILWAY_REPLICA_REGION||process.env.RAILWAY_REGION||'—',
       xray:{on:!!(xray&&xray.exitCode===null),mem:xrayMem(),err:xrayErr}});
-    if(u==='/api/state'){
-      const D=dates14(),hh=effHost(req,h);return J(res,{host:hh,realHost:h,settings:{addr:db.settings.addr,host:db.settings.host||'',fallback:db.settings.fallback||'',theme:'gotham',plans:Array.isArray(db.settings.plans)?db.settings.plans:[],payCard:db.settings.payCard||'',payUrl:db.settings.payUrl||'',botUser:db.settings.botUser||'',hasBotToken:!!db.settings.botToken,scanAuto:!!db.settings.scanAuto,scanEveryH:Math.max(1,Math.min(72,+db.settings.scanEveryH||12)),sources:srcList(),...contact(),...repoCfg(),auto:!!db.settings.auto,hasToken:!!db.settings.token},version:curVersion(),inbounds:db.inbounds,daily:{dates:D,total:D.map(d=>(db.daily||{})[d]||0)},
-        users:db.users.map(x=>pubUser(x,hh,addr,true)),totalUsed:db.users.reduce((a,x)=>a+x.used,0)});
+    if(u==='/api/state'){if(sshOn())ensureSsh();
+      const D=dates14(),hh=effHost(req,h);return J(res,{host:hh,realHost:h,settings:{subInfo:subInfoOn(),locName:db.settings.locName||'',nameStyle:NAME_STYLES.includes(db.settings.nameStyle)?db.settings.nameStyle:'bold',autoLoc:styleText(autoLoc()),sshOn:!!db.settings.sshOn,sshReady:!!ssh2,addr:db.settings.addr,host:db.settings.host||'',fallback:db.settings.fallback||'',theme:'gotham',plans:Array.isArray(db.settings.plans)?db.settings.plans:[],payCard:db.settings.payCard||'',payUrl:db.settings.payUrl||'',botUser:db.settings.botUser||'',hasBotToken:!!db.settings.botToken,scanAuto:!!db.settings.scanAuto,scanEveryH:Math.max(1,Math.min(72,+db.settings.scanEveryH||12)),sources:srcList(),...contact(),...repoCfg(),auto:!!db.settings.auto,hasToken:!!db.settings.token},version:curVersion(),inbounds:db.inbounds,daily:{dates:D,total:D.map(d=>(db.daily||{})[d]||0)},
+        users:db.users.map(x=>({...pubUser(x,hh,addr,true),...(sshOn()&&x.ssh?{ssh:x.ssh}:{})})),totalUsed:db.users.reduce((a,x)=>a+x.used,0)});
     }
     if(u==='/api/backup')return J(res,{ok:1,at:Date.now(),db});
     if(u==='/api/security')return J(res,{log:secLog,banned:Object.keys(fails).filter(k=>(fails[k].n>=8))});
@@ -562,10 +673,10 @@ http.createServer(async(req,res)=>{
       if(db.inbounds.some(i=>i.path===pth))return J(res,{e:'این مسیر قبلاً استفاده شده'},400);
       if(!['vless','vmess','trojan'].includes(b.proto)||!['ws','httpupgrade'].includes(b.net))return J(res,{e:'نامعتبر'},400);
       const port=Math.max(10000,...db.inbounds.map(i=>i.port))+1;
-      db.inbounds.push({id:'i'+Date.now().toString(36),port,on:true,proto:b.proto,net:b.net,path:pth,name:String(b.name||(b.proto.toUpperCase()+' · '+b.net.toUpperCase())).slice(0,30),loc:cleanLoc(b.loc)});
+      db.inbounds.push({id:'i'+Date.now().toString(36),port,on:true,proto:b.proto,net:b.net,path:pth,name:String(b.name||(b.proto.toUpperCase()+' · '+b.net.toUpperCase())).slice(0,30),loc:keepName(b.loc)});
       save();restartSoon();return J(res,{ok:1})}
     if(u==='/api/inbound/update'){const i=db.inbounds.find(v=>v.id===b.id);if(!i)return J(res,{e:1},404);
-      if(b.on!=null)i.on=!!b.on;if(b.name)i.name=String(b.name).slice(0,30);if(b.loc!=null)i.loc=cleanLoc(b.loc);
+      if(b.on!=null)i.on=!!b.on;if(b.name)i.name=String(b.name).slice(0,30);if(b.loc!=null)i.loc=keepName(b.loc);
       if(b.egress!=null)i.egress=(db.locs||[]).some(l=>l.id===b.egress)?b.egress:'';save();restartSoon();return J(res,{ok:1})}
     if(u==='/api/inbound/del'){if(db.inbounds.length<=1)return J(res,{e:'حداقل یک اینباند لازمه'},400);db.inbounds=db.inbounds.filter(v=>v.id!==b.id);save();restartSoon();return J(res,{ok:1})}
     if(u==='/api/settings'){
@@ -575,6 +686,8 @@ http.createServer(async(req,res)=>{
       if(b.token)db.settings.token=String(b.token).trim().slice(0,200);if(b.clearToken)delete db.settings.token;
       if(b.auto!=null)db.settings.auto=!!b.auto;
       if(b.support!=null)db.settings.support=cleanTg(b.support);if(b.channel!=null)db.settings.channel=cleanTg(b.channel);
+      if(b.subInfo!=null)db.settings.subInfo=!!b.subInfo;if(b.locName!=null)db.settings.locName=keepName(b.locName);if(NAME_STYLES.includes(b.nameStyle))db.settings.nameStyle=b.nameStyle;
+      if(b.sshOn!=null){db.settings.sshOn=!!b.sshOn;if(db.settings.sshOn&&ssh2){ensureSsh();sshInit()}}
       if(b.addr!=null)db.settings.addr=cleanAddr(String(b.addr).trim());
       if(b.host!=null){const v=String(b.host).trim().toLowerCase().replace(/^https?:\/\//,'').split('/')[0];if(v&&!/^[a-z0-9.-]{3,253}$/.test(v))return J(res,{e:'دامنه نامعتبره (مثل sub.example.com)'},400);db.settings.host=v?cleanHost(v):'';}
       if(b.fallback!=null){const v=String(b.fallback).trim().toLowerCase().replace(/^https?:\/\//,'').split('/')[0];if(v&&!/^[a-z0-9.-]{3,253}$/.test(v))return J(res,{e:'دامنه جایگزین نامعتبره'},400);db.settings.fallback=v?cleanHost(v):'';}
@@ -606,11 +719,12 @@ http.createServer(async(req,res)=>{
       if(db.locs.some(l=>l.host===host&&+l.port===port))return J(res,{e:'این پروکسی قبلاً اضافه شده'},400);
       if(db.locs.length>=100)return J(res,{e:'حداکثر ۱۰۰ لوکیشن'},400);
       const user=String(b.user||'').slice(0,64),pass=String(b.pass||'').slice(0,64);
-      let proto=(b.proto==='http'||b.proto==='socks5')?b.proto:'',ms=null,why=null;
+      let proto=(b.proto==='http'||b.proto==='socks5')?b.proto:'',ms=null,why=null,xip='',xcc='';
       if(proto){const t=proto==='http'?await httpTest(host,port,user,pass,8000):await socksTest(host,port,user,pass,8000);
-        if(t.ms==null)return J(res,{e:'پروکسی جواب نداد ('+(t.why||'timeout')+')'},400);ms=t.ms}
-      else{const d=await detectProto(host,port,user,pass);if(!d.proto)return J(res,{e:'هیچ پروتکلی جواب نداد (socks5/http)'},400);proto=d.proto;ms=d.ms}
-      db.locs.push({id:'L'+Date.now().toString(36),label:cleanLoc(b.label)||('🌐 '+host),host,port,user,pass,proto,on:true,ms,why,at:Date.now()});
+        if(t.ms==null)return J(res,{e:'پروکسی جواب نداد ('+(t.why||'timeout')+')'},400);ms=t.ms;xip=t.ip||'';xcc=t.cc||''}
+      else{const d=await detectProto(host,port,user,pass);if(!d.proto)return J(res,{e:'هیچ پروتکلی جواب نداد (socks5/http)'},400);proto=d.proto;ms=d.ms;xip=d.ip||'';xcc=d.cc||''}
+      const xcountry=xcc?cleanLoc(ccName(xcc)):'';
+      db.locs.push({id:'L'+Date.now().toString(36),label:cleanLoc(b.label)||xcountry||host,host,port,user,pass,proto,on:true,ms,why,at:Date.now(),egress:xip,cc:xcc,country:xcountry});
       save();restartSoon();return J(res,{ok:1,proto,ms})}
     if(u==='/api/loc/update'){const l=(db.locs||[]).find(v=>v.id===b.id);if(!l)return J(res,{e:1},404);
       if(b.on!=null)l.on=!!b.on;if(b.label!=null)l.label=cleanLoc(b.label)||l.label;save();restartSoon();return J(res,{ok:1})}
@@ -623,7 +737,7 @@ http.createServer(async(req,res)=>{
       l.proto=d.proto;l.ms=d.ms;l.why=null;
       const g=await geoFill(await socksEgress(l.host,l.port,l.user,l.pass,l.proto).catch(()=>({})),l.host,l.port,l.user,l.pass,l.proto);
       if(g&&g.ip){l.egress=g.ip;l.country=g.country||'';l.cc=g.cc||'';
-        if(/^🌐 [\d.]/.test(l.label||''))l.label=ccFlag(g.cc)+' '+(g.country||l.host)}
+        if(/^(?:\uD83C\uDF10 )?[\d.]+(?::\d+)?$/.test(l.label||''))l.label=(g.country||l.host)}
       save();return J(res,{ok:1,ms:l.ms,proto:l.proto,why:null,egress:l.egress||null,country:l.country||null,cc:l.cc||null})}
     if(u==='/api/loc/fetch'){
       // 3 stages: (A) cheap TCP ping to thousands of random candidates, (B) real end-to-end probe for the closest ones, (C) re-check the winners
@@ -650,7 +764,7 @@ http.createServer(async(req,res)=>{
       db.locs=db.locs||[];const added=[];
       for(const g of keep.slice(0,max)){if(db.locs.length>=100)break;
         const country=g.cc?cleanLoc(ccName(g.cc)):'';
-        const nl={id:'L'+Date.now().toString(36)+Math.floor(Math.random()*99),label:g.cc?(ccFlag(g.cc)+' '+(country||g.host)):'🌐 '+g.host,on:true,host:g.host,port:g.port,user:g.user,pass:g.pass,proto:g.proto,ms:g.ms,at:Date.now(),egress:g.ip||'',country,cc:g.cc||''};
+        const nl={id:'L'+Date.now().toString(36)+Math.floor(Math.random()*99),label:g.cc?(country||g.host):g.host,on:true,host:g.host,port:g.port,user:g.user,pass:g.pass,proto:g.proto,ms:g.ms,at:Date.now(),egress:g.ip||'',country,cc:g.cc||''};
         db.locs.push(nl);added.push(nl)}
       save();restartSoon();
       return J(res,{ok:1,tested:all.length,checked:fresh.length,reachable:A.length,probed:Math.min(A.length,70),added:added.length,maxMs,secs:Math.round((Date.now()-T0)/1000),fails,
@@ -660,13 +774,13 @@ http.createServer(async(req,res)=>{
       if(db.inbounds.some(i=>i.path===pth))return J(res,{e:'مسیر تکراری شد، دوباره بزن'},400);
       const port=Math.max(10000,...db.inbounds.map(i=>i.port))+1;
       const nm=String('Proxy · '+(l.label||l.host)).slice(0,30);
-      db.inbounds.push({id:'i'+Date.now().toString(36),port,on:true,proto:'vless',net:'ws',path:pth,name:nm,loc:cleanLoc(l.label)||cleanLoc(l.host),egress:l.id});
+      db.inbounds.push({id:'i'+Date.now().toString(36),port,on:true,proto:'vless',net:'ws',path:pth,name:nm,loc:'',egress:l.id});
       save();restartSoon();return J(res,{ok:1,name:nm})}
   }
   res.writeHead(404);res.end('Not found');
 }).on('upgrade',(req,sock,head)=>{
   const p=db.inbounds.find(x=>x.on&&(req.url===x.path||req.url.startsWith(x.path+'?')||req.url.startsWith(x.path+'/')));
-  if(!p)return sock.destroy();
+  if(!p){if(sshWant(req))return sshAttach(req,sock,head);return sock.destroy()}
   const cip=clientIp(req),up=net.connect(p.port,'127.0.0.1',()=>{
     let s=req.method+' '+req.url+' HTTP/1.1\r\n';
     for(let i=0;i<req.rawHeaders.length;i+=2){const k=req.rawHeaders[i].toLowerCase();if(k==='x-forwarded-for'||k==='x-real-ip'||k==='forwarded')continue;s+=req.rawHeaders[i]+': '+req.rawHeaders[i+1]+'\r\n'}

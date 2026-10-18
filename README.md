@@ -16,16 +16,16 @@
   </p>
 </div>
 
-> ⚡ **60-second start:** deploy on Railway → open your domain → log in → **کاربران → ＋ جدید** → copy the subscription link. That's it — client apps pick it up instantly.
+> **60-second start:** deploy on Railway → open your domain → log in → **کاربران → ＋ جدید** → copy the subscription link. That's it — client apps pick it up instantly.
 
 ---
 
 <details>
-<summary><b>📚 Table of contents</b></summary>
+<summary><b>Table of contents</b></summary>
 
 - [Why BATAMN?](#-why-batamn)
 - [Deployment](#-deployment)
-- [Environment variables](#️-environment-variables)
+- [Environment variables](#-environment-variables)
 - [Panel tour](#-panel-tour)
 - [Subscription page](#-subscription-page)
 - [API reference](#-api-reference)
@@ -38,7 +38,7 @@
 
 </details>
 
-## ✦ Why BATAMN?
+## Why BATAMN?
 
 Everything a small VPN service needs in one lightweight panel: users with traffic/expiry/device limits, generated VLESS/VMess/Trojan links, QR codes, a clean-IP scanner and a minimal Telegram bot — all behind a single HTTP port.
 
@@ -48,17 +48,17 @@ Everything a small VPN service needs in one lightweight panel: users with traffi
 
 | Area | What you get |
 |---|---|
-| 👤 Users | Create/manage accounts, volume + expiry + device limits, bulk actions, sorting, per-user QR |
-| ⚡ Scanner | Clean-IP scan over CDN ranges, fastest-first results, auto rotation |
-| 📱 Sub page | FA/EN, usage ring + forecast, 14-day chart, speed test, per-config ping, QR, PWA |
-| 🤖 Telegram | `/start + id` status lookup, renew deep-links, support/channel buttons |
-| 📦 Plans & backup | One-click plans, full JSON backup/restore |
-| 🎨 Gotham UI | One polished dark theme + redesigned login |
-| 🩺 Reliability | Xray config test before restart, crash-loop guard, error display + manual restart |
+| Users | Create/manage accounts, volume + expiry + device limits, bulk actions, sorting, per-user QR |
+| Scanner | Clean-IP scan over CDN ranges, fastest-first results, auto rotation |
+| Sub page | FA/EN, usage ring + forecast, 14-day chart, speed test, per-config ping, QR, PWA |
+| Telegram | `/start + id` status lookup, renew deep-links, support/channel buttons |
+| Plans & backup | One-click plans, full JSON backup/restore |
+| Gotham UI | One polished dark theme + redesigned login |
+| Reliability | Xray config test before restart, crash-loop guard, error display + manual restart |
 
 ---
 
-## 🚀 Deployment
+## Deployment
 
 <div align="center">
   <img src="svg/deploy.svg" alt="BATAMN deployment flow" width="100%" />
@@ -96,7 +96,7 @@ The panel listens on `PORT` (default `8080`). Behind Railway/Cloudflare, public 
 
 ---
 
-## ⚙️ Environment variables
+## Environment variables
 
 | Variable | Default | Purpose |
 |---|---|---|
@@ -109,9 +109,9 @@ The panel listens on `PORT` (default `8080`). Behind Railway/Cloudflare, public 
 
 ---
 
-## 🖥 Panel tour
+## Panel tour
 
-- **داشبورد / Dashboard** — users, online devices, traffic, connections, 14-day chart, server gauges (CPU/RAM/disk), network sparkline, expiring-soon list, top users, speed test, per-IP kick (✕ bans an IP for 30 min).
+- **داشبورد / Dashboard** — users, online devices, traffic, connections, 14-day chart, server gauges (CPU/RAM/disk), network sparkline, expiring-soon list, top users, speed test, per-IP kick (bans an IP for 30 min).
 - **کاربران / Users** — search, status filters, sorting (newest / top usage / name / expiry), bulk select: extend +reset traffic +delete, per-user subscription link + QR + page.
 - **اینباندها / Inbounds** — VLESS/VMess/Trojan over WS/HTTPUpgrade on the same port 443 with separate paths.
 - **اسکنر / Scanner** — tests random CDN IPs from `assets/cf_subnets.txt` for the fastest clean IPs; one click sets the default address.
@@ -119,7 +119,7 @@ The panel listens on `PORT` (default `8080`). Behind Railway/Cloudflare, public 
 
 ---
 
-## 📱 Subscription page
+## Subscription page
 
 Every user gets a personal page at `/sub/<id>` (and a base64 subscription link for clients):
 
@@ -133,7 +133,7 @@ Every user gets a personal page at `/sub/<id>` (and a base64 subscription link f
 
 ---
 
-## 🔌 API reference
+## API reference
 
 Selected authenticated endpoints (`bt` cookie; all JSON):
 
@@ -154,7 +154,7 @@ Public: `GET /sub/<id>` (HTML page or base64 subscription), `GET /sub/<id>/live`
 
 ---
 
-## 📁 Project structure
+## Project structure
 
 ```text
 .
@@ -173,13 +173,13 @@ Public: `GET /sub/<id>` (HTML page or base64 subscription), `GET /sub/<id>/live`
 
 ---
 
-## 🔄 In-panel GitHub updater
+## In-panel GitHub updater
 
 Set `owner/repo` (+ branch, optional token for private repos) in Settings → Update. The panel can **check** and **install** updates from GitHub without redeploying; `boot.js` runs the new copy and rolls back automatically if it crash-loops. A 30-minute auto-update toggle is included.
 
 ---
 
-## 🔐 Security notes
+## Security notes
 
 - Change the default password immediately; it lives in `db.json` (`BATAMN_DATA`).
 - Keep `ADMIN_PASS`, bot tokens and backups private — never commit `data/`.
@@ -188,7 +188,7 @@ Set `owner/repo` (+ branch, optional token for private repos) in Settings → Up
 
 ---
 
-## ❓ FAQ
+## FAQ
 
 **Panel won't load on my custom domain.** The domain must point to the service with working HTTPS (Railway domain or Cloudflare-proxied). The login cookie is `Secure` on HTTPS and plain on HTTP automatically — mixed setups break login. Set the **main domain** in Settings so links always use it.
 
@@ -196,12 +196,12 @@ Set `owner/repo` (+ branch, optional token for private repos) in Settings → Up
 
 ---
 
-## 💬 Credits
+## Credits
 
 - Telegram: [@mamadi1048](https://t.me/mamadi1048) · [@editmamad_e](https://t.me/editmamad_e)
 - Built with [Xray-core](https://github.com/XTLS/Xray-core)
 
-## 📄 License
+## License
 
 MIT — do whatever you want, attribution appreciated.
 
@@ -215,11 +215,11 @@ MIT — do whatever you want, attribution appreciated.
   <img src="svg/logo.svg" alt="BATAMN" width="320" />
 </div>
 
-## ✦ BATAMN چیست؟
+## BATAMN چیست؟
 
 **BATAMN** یه پنل مدیریتی سبک برای Xrayـه: ساخت و مدیریت کاربر (حجم، انقضا، محدودیت دستگاه)، لینک و QR اشتراک، اسکنر کلین‌آی‌پی، ربات تلگرام و بکاپ — همه با یه پورت (`8080`) و آماده Railway. رابط فارسی و انگلیسی داره با تم یکدست **Gotham** + صفحه لاگین جدید.
 
-## 🚀 نصب روی Railway
+## نصب روی Railway
 
 1. ریپو رو Fork/Push کن تو گیت‌هاب خودت.
 2. تو Railway از روی ریپو پروژه بساز (با `Dockerfile` بالا میاد).
@@ -227,12 +227,12 @@ MIT — do whatever you want, attribution appreciated.
 4. یه Volume روی `/data` اضافه کن تا دیتابیس نپره.
 5. دامنه عمومی بساز و بازش کن — با رمزت وارد شو.
 
-## 🔧 اگه مشکلی بود
+## اگه مشکلی بود
 
 - **پنل با دامین بالا نمیاد:** دامین باید HTTPS سالم داشته باشه؛ دامین اصلی رو تو تنظیمات ست کن.
 - **Xray آفلاینه:** کارت Server داشبورد خطای دقیق رو نشون میده + دکمه ری‌استارت دستی داره.
 
-## 🔗 لینک‌ها
+## لینک‌ها
 
 - تلگرام: [@mamadi1048](https://t.me/mamadi1048) · [@editmamad_e](https://t.me/editmamad_e)
 - موتور: [Xray-core](https://github.com/XTLS/Xray-core)

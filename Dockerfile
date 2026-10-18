@@ -10,6 +10,7 @@ RUN set -e; \
 WORKDIR /app
 RUN npm init -y >/dev/null && npm i qrcode-generator@1.4.4 --no-audit --no-fund
 RUN npm i vazirmatn @fontsource-variable/inter @fontsource-variable/jetbrains-mono --no-audit --no-fund || echo 'fonts skipped'
+RUN npm i ssh2@1 --ignore-scripts --no-audit --no-fund || echo 'ssh2 skipped'
 COPY *.js *.html *.css *.svg ./
 COPY assets ./assets
 RUN date +%s > /app/BUILD_TS

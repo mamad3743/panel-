@@ -320,3 +320,10 @@ select[data-eg]{max-width:100%}
 .dg{align-items:flex-start}
 .dgh{display:block;font-style:normal;direction:rtl;text-align:right;color:var(--warn);font-size:11.5px;margin-top:4px;line-height:1.7}
 .xl{margin:12px 0 0;padding:10px;border-radius:12px;background:rgba(0,0,0,.35);border:1px solid var(--line);color:var(--mu);font:11px/1.6 var(--fm);direction:ltr;text-align:left;white-space:pre-wrap;word-break:break-all;max-height:160px;overflow:auto}
+
+/* ===== v9: line icons instead of emoji ===== */
+.svgi{width:1.15em;height:1.15em;vertical-align:-.2em;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round;flex:none}
+.card h3 .svgi,.sec h2 .svgi{color:var(--ac);margin-inline-end:6px}
+.cc{display:inline-block;padding:1px 6px;border-radius:6px;font:600 10px/1.6 var(--fm);letter-spacing:.5px;color:var(--ac3);background:rgba(var(--rgb),.12);border:1px solid rgba(var(--rgb),.28);vertical-align:1px}
+.nx-dead .ic svg{width:46px;height:46px;stroke-width:1.5;color:var(--ac)}
+button .svgi{width:1.1em;height:1.1em}
