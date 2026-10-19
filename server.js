@@ -206,6 +206,9 @@ setInterval(async()=>{
 const cleanAddr=a=>a&&/^[\w.\-:\[\]]{1,100}$/.test(a)?a:'';
 const stripEmoji=s=>String(s==null?'':s).replace(/[\u{1F300}-\u{1FAFF}\u{1F1E6}-\u{1F1FF}\u{2600}-\u{27BF}\u{2B50}\u{2B06}\u{2B55}\u{231A}\u{231B}\u{23E9}-\u{23FA}\u{FE0F}\u{200D}]/gu,'');
 const cleanLoc=s=>stripEmoji(s).replace(/[\u0000-\u001F\u007F<>"']/g,'').replace(/\s{2,}/g,' ').trim().slice(0,24);
+// extra query parameters appended to every vless/trojan link (e.g. Hiddify fragment, ech=...)
+const cleanExtra=v=>{v=String(v==null?'':v).trim().replace(/^[?&]+/,'').replace(/&+$/,'');return /^[A-Za-z0-9_.,:=&%\-+\/]{0,300}$/.test(v)?v:null};
+const linkExtra=()=>cleanExtra(db.settings.linkExtra)||'';
 // ---------- config names: only the location (flag + country name), no brand, no protocol ----------
 const keepName=s=>String(s==null?'':s).replace(/[\u0000-\u001F\u007F<>"']/g,'').replace(/\s{2,}/g,' ').trim().slice(0,40);
 const flagOf=cc=>{try{return String.fromCodePoint(cc.charCodeAt(0)+127397,cc.charCodeAt(1)+127397)}catch(e){return''}};
@@ -248,6 +251,7 @@ function linksFor(u,h,addr){
     let l;    if(i.proto==='vmess')l='vmess://'+Buffer.from(JSON.stringify({v:'2',ps:nm,add:a,port:'443',id:u.id,aid:'0',scy:'auto',net:i.net,type:'none',host:h,path:i.path,tls:'tls',sni:h,alpn:'http/1.1',fp:'chrome'})).toString('base64');
     else if(i.proto==='trojan')l='trojan://'+u.id+'@'+a+':443?'+q+'&type='+i.net+'&path='+p+'#'+encodeURIComponent(nm);
     else l='vless://'+u.id+'@'+a+':443?encryption=none&'+q+'&type='+i.net+'&path='+p+'#'+encodeURIComponent(nm);
+    if(i.proto!=='vmess'){const xp=linkExtra();if(xp)l=l.replace('#','&'+xp+'#')}
     return{k:i.id,n:i.name,loc:loc,eg:eg,l};});
 }
 // ---------- info "configs" shown at the top of the subscription (usage / plan / days left); they are dummies, not real tunnels ----------
@@ -642,7 +646,7 @@ http.createServer(async(req,res)=>{
       pup:process.uptime(),load:os.loadavg(),conns,online:onlineSummary(),region:process.env.RAILWAY_REPLICA_REGION||process.env.RAILWAY_REGION||'—',
       xray:{on:!!(xray&&xray.exitCode===null),mem:xrayMem(),err:xrayErr}});
     if(u==='/api/state'){if(sshOn())ensureSsh();
-      const D=dates14(),hh=effHost(req,h);return J(res,{host:hh,realHost:h,settings:{subInfo:subInfoOn(),locName:db.settings.locName||'',nameStyle:NAME_STYLES.includes(db.settings.nameStyle)?db.settings.nameStyle:'bold',autoLoc:styleText(autoLoc()),sshOn:!!db.settings.sshOn,sshReady:!!ssh2,addr:db.settings.addr,host:db.settings.host||'',fallback:db.settings.fallback||'',theme:'gotham',plans:Array.isArray(db.settings.plans)?db.settings.plans:[],payCard:db.settings.payCard||'',payUrl:db.settings.payUrl||'',botUser:db.settings.botUser||'',hasBotToken:!!db.settings.botToken,scanAuto:!!db.settings.scanAuto,scanEveryH:Math.max(1,Math.min(72,+db.settings.scanEveryH||12)),sources:srcList(),...contact(),...repoCfg(),auto:!!db.settings.auto,hasToken:!!db.settings.token},version:curVersion(),inbounds:db.inbounds,daily:{dates:D,total:D.map(d=>(db.daily||{})[d]||0)},
+      const D=dates14(),hh=effHost(req,h);return J(res,{host:hh,realHost:h,settings:{linkExtra:linkExtra(),subInfo:subInfoOn(),locName:db.settings.locName||'',nameStyle:NAME_STYLES.includes(db.settings.nameStyle)?db.settings.nameStyle:'bold',autoLoc:styleText(autoLoc()),sshOn:!!db.settings.sshOn,sshReady:!!ssh2,addr:db.settings.addr,host:db.settings.host||'',fallback:db.settings.fallback||'',theme:'gotham',plans:Array.isArray(db.settings.plans)?db.settings.plans:[],payCard:db.settings.payCard||'',payUrl:db.settings.payUrl||'',botUser:db.settings.botUser||'',hasBotToken:!!db.settings.botToken,scanAuto:!!db.settings.scanAuto,scanEveryH:Math.max(1,Math.min(72,+db.settings.scanEveryH||12)),sources:srcList(),...contact(),...repoCfg(),auto:!!db.settings.auto,hasToken:!!db.settings.token},version:curVersion(),inbounds:db.inbounds,daily:{dates:D,total:D.map(d=>(db.daily||{})[d]||0)},
         users:db.users.map(x=>({...pubUser(x,hh,addr,true),...(sshOn()&&x.ssh?{ssh:x.ssh}:{})})),totalUsed:db.users.reduce((a,x)=>a+x.used,0)});
     }
     if(u==='/api/backup')return J(res,{ok:1,at:Date.now(),db});
@@ -686,6 +690,7 @@ http.createServer(async(req,res)=>{
       if(b.token)db.settings.token=String(b.token).trim().slice(0,200);if(b.clearToken)delete db.settings.token;
       if(b.auto!=null)db.settings.auto=!!b.auto;
       if(b.support!=null)db.settings.support=cleanTg(b.support);if(b.channel!=null)db.settings.channel=cleanTg(b.channel);
+      if(b.linkExtra!=null){const v=cleanExtra(b.linkExtra);if(v===null)return J(res,{e:'فقط حروف انگلیسی، عدد و = & , : . - _ % / + مجازه'},400);db.settings.linkExtra=v}
       if(b.subInfo!=null)db.settings.subInfo=!!b.subInfo;if(b.locName!=null)db.settings.locName=keepName(b.locName);if(NAME_STYLES.includes(b.nameStyle))db.settings.nameStyle=b.nameStyle;
       if(b.sshOn!=null){db.settings.sshOn=!!b.sshOn;if(db.settings.sshOn&&ssh2){ensureSsh();sshInit()}}
       if(b.addr!=null)db.settings.addr=cleanAddr(String(b.addr).trim());
