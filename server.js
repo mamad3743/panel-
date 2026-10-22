@@ -11,8 +11,12 @@ const GB=1073741824,GHAPI=process.env.GITHUB_API||'https://api.github.com';
 const DEF_IN=[
  {name:'VLESS · WS',proto:'vless',net:'ws',path:'/ws'},{name:'VMess · WS',proto:'vmess',net:'ws',path:'/vm'},
  {name:'Trojan · WS',proto:'trojan',net:'ws',path:'/tr'},{name:'VLESS · HTTPUpgrade',proto:'vless',net:'httpupgrade',path:'/hu'}];
+// NODE mode: this process is a worker node (another Railway project) that syncs users from a master panel
+const NODE_MODE=process.env.NODE_MODE==='1'&&!!process.env.MASTER_URL&&!!process.env.NODE_TOKEN;
+let NODE_PEND={},nodeErr='';
 let db;
-try{db=JSON.parse(fs.readFileSync(DBF))}catch(e){
+if(NODE_MODE)db={secret:'node',settings:{addr:'',theme:'gotham',pass:crypto.randomBytes(16).toString('hex')},inbounds:[],users:[],locs:[],nodes:[]};
+else try{db=JSON.parse(fs.readFileSync(DBF))}catch(e){
   let old=[];try{old=JSON.parse(fs.readFileSync(OLD))}catch(_){}
   db={secret:crypto.randomBytes(24).toString('hex'),settings:{addr:'',theme:'gotham',pass:process.env.ADMIN_PASS||'admin'},
     inbounds:DEF_IN.map((x,i)=>({id:'i'+(i+1),port:10000+i,on:true,...x})),
@@ -20,7 +24,8 @@ try{db=JSON.parse(fs.readFileSync(DBF))}catch(e){
   save();
 }
 if(db.settings.theme!=='gotham'){db.settings.theme='gotham';try{save()}catch(e){}}
-function save(){fs.writeFileSync(DBF,JSON.stringify(db,null,1))}
+function save(){if(NODE_MODE)return;fs.writeFileSync(DBF,JSON.stringify(db,null,1))}
+db.nodes=db.nodes||[];
 const F=n=>fs.readFileSync(path.join(__dirname,n));
 const STATIC={'/':['index.html','text/html; charset=utf-8'],'/style.css':['style.css','text/css'],'/app.js':['app.js','application/javascript'],'/bg.svg':['bg.svg','image/svg+xml'],'/speed.js':['speed.js','application/javascript']};
 const FILES={};for(const k in STATIC)FILES[k]=F(STATIC[k][0]);
@@ -128,7 +133,7 @@ function poll(){return new Promise(r=>{
   execFile('xray',['api','statsquery','-s','127.0.0.1:10085','-pattern','user>>>','-reset'],{timeout:5000},(e,out)=>{
     if(e||!out)return r();
     try{let ch=false;(JSON.parse(out).stat||[]).forEach(s=>{const m=/^user>>>(.+)>>>traffic>>>(uplink|downlink)$/.exec(s.name);if(!m)return;
-      const u=db.users.find(x=>x.id===m[1]);if(u){const d=+s.value||0;u.used+=d;addTraffic(u,d);ch=true}});if(ch){prune();save()}}catch(_){}
+      const u=db.users.find(x=>x.id===m[1]);if(u){const d=+s.value||0;u.used+=d;addTraffic(u,d);ch=true;if(NODE_MODE)NODE_PEND[u.id]=(NODE_PEND[u.id]||0)+d}});if(ch){prune();save()}}catch(_){}
     r()})})}
 setInterval(async()=>{await poll();if(sig()!==lastSig)startXray()},10000);
 startXray();
@@ -234,25 +239,33 @@ async function detectServerCC(){
   if(!SRV_CC){const rg=String(process.env.RAILWAY_REPLICA_REGION||process.env.RAILWAY_REGION||'');const map={'europe-west4':'NL','us-west2':'US','us-east4':'US','asia-southeast1':'SG'};for(const k in map)if(rg.startsWith(k)){SRV_CC=map[k];break}}}
 detectServerCC();setInterval(detectServerCC,3600e3);
 const autoLoc=()=>keepName(db.settings.locName)||locText(SRV_CC,'');
+const nodeBase=n=>keepName(n.label)||locText(n.cc,'')||keepName(n.name)||'Node';
 function linksFor(u,h,addr){
-  const a=addr||db.settings.addr||h,q='security=tls&sni='+h+'&fp=chrome&alpn=http%2F1.1&host='+h;
-  const ibs=db.inbounds.filter(i=>i.on),cnt={};
-  const names=ibs.map(i=>{
+  const items=[],ibs=db.inbounds.filter(i=>i.on);
+  ibs.forEach(i=>{
     const egL=(db.locs||[]).find(x=>x.id===i.egress&&x.on);
     const auto=egL&&[egL.label,egL.country,egL.host].some(v=>v&&cleanLoc(v)===cleanLoc(i.loc));   // loc auto-filled from the proxy label is not a manual name
     let n=(!auto&&keepName(i.loc))||'';
     if(!n&&egL)n=/^[A-Z]{2}$/.test(egL.cc||'')?locText(egL.cc,egL.country):keepName(egL.label||egL.host);
     if(!n)n=autoLoc()||stripEmoji(i.name).replace(/\s*·\s*/g,'-')||'Server';
-    cnt[n]=(cnt[n]||0)+1;return styleText(cnt[n]>1?n+' '+cnt[n]:n)});
-  return ibs.map((i,ix)=>{
-    const loc=cleanLoc(i.loc);
-    const egL=(db.locs||[]).find(x=>x.id===i.egress&&x.on),eg=egL?(egL.label||(egL.host+':'+egL.port)):'';
-    const nm=names[ix],p=encodeURIComponent(i.path);
-    let l;    if(i.proto==='vmess')l='vmess://'+Buffer.from(JSON.stringify({v:'2',ps:nm,add:a,port:'443',id:u.id,aid:'0',scy:'auto',net:i.net,type:'none',host:h,path:i.path,tls:'tls',sni:h,alpn:'http/1.1',fp:'chrome'})).toString('base64');
+    items.push({i,host:h,a:addr||db.settings.addr||h,base:n,loc:cleanLoc(i.loc),eg:egL?(egL.label||(egL.host+':'+egL.port)):'',k:i.id});
+  });
+  // worker nodes: same users, own domain + own location name (proxy-egress inbounds exist only on the master)
+  if(!NODE_MODE)(db.nodes||[]).filter(n=>n.on&&n.domain).forEach(n=>{
+    const use=ibs.filter(i=>!i.egress),base=nodeBase(n);
+    (n.all?use:use.slice(0,1)).forEach(i=>items.push({i,host:n.domain,a:n.domain,base,loc:cleanLoc(base),eg:'',k:i.id+'@'+n.id}));
+  });
+  const cnt={};
+  return items.map(it=>{
+    const i=it.i,host=it.host,a=it.a,q='security=tls&sni='+host+'&fp=chrome&alpn=http%2F1.1&host='+host,p=encodeURIComponent(i.path);
+    cnt[it.base]=(cnt[it.base]||0)+1;const nm=styleText(cnt[it.base]>1?it.base+' '+cnt[it.base]:it.base);
+    let l;
+    if(i.proto==='vmess')l='vmess://'+Buffer.from(JSON.stringify({v:'2',ps:nm,add:a,port:'443',id:u.id,aid:'0',scy:'auto',net:i.net,type:'none',host:host,path:i.path,tls:'tls',sni:host,alpn:'http/1.1',fp:'chrome'})).toString('base64');
     else if(i.proto==='trojan')l='trojan://'+u.id+'@'+a+':443?'+q+'&type='+i.net+'&path='+p+'#'+encodeURIComponent(nm);
     else l='vless://'+u.id+'@'+a+':443?encryption=none&'+q+'&type='+i.net+'&path='+p+'#'+encodeURIComponent(nm);
     if(i.proto!=='vmess'){const xp=linkExtra();if(xp)l=l.replace('#','&'+xp+'#')}
-    return{k:i.id,n:i.name,loc:loc,eg:eg,l};});
+    return{k:it.k,n:i.name,loc:it.loc,eg:it.eg,l};
+  });
 }
 // ---------- info "configs" shown at the top of the subscription (usage / plan / days left); they are dummies, not real tunnels ----------
 const subInfoOn=()=>db.settings.subInfo!==false;
@@ -529,6 +542,31 @@ const esc=s=>String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;'
 const cleanName=s=>String(s||'user').slice(0,30).replace(/[^\w\u0600-\u06FF -]/g,'').trim()||'user';
 const pubUser=(u,h,addr,withLinks)=>({days:dates14().map(d=>(u.days||{})[d]||0),maxDev:u.maxDev||0,online:onlineOf(u.id).length,id:u.id,name:u.name,on:u.on,created:u.created,limit:u.limit,exp:u.exp,used:u.used,note:u.note,status:status(u),...(withLinks?{links:linksFor(u,h,addr)}:{})});
 
+
+// ---------- worker nodes ----------
+const sha256=x=>crypto.createHash('sha256').update(String(x)).digest('hex');
+const nodeAuth=req=>{const t=String(req.headers.authorization||'').replace(/^Bearer\s+/i,'');if(!t||!db.nodes)return null;const h=sha256(t);return db.nodes.find(n=>eqs(n.tokenHash,h))||null};
+const nodePub=n=>({id:n.id,name:n.name,domain:n.domain||'',cc:n.cc||'',ccManual:!!n.ccManual,label:n.label||'',on:!!n.on,all:!!n.all,created:n.created,lastSeen:n.lastSeen||0,connected:Date.now()-(n.lastSeen||0)<60000,up:n.up==null?null:!!n.up,ms:n.ms==null?null:n.ms,checked:n.checked||0});
+const cleanDomain=v=>{v=String(v==null?'':v).trim().toLowerCase().replace(/^https?:\/\//,'').replace(/[\/?#].*$/,'').replace(/:\d+$/,'');return /^[a-z0-9]([a-z0-9.-]{1,251})[a-z0-9]$/.test(v)||v===''?v:null};
+async function probeNodes(){for(const n of db.nodes||[]){if(!n.domain)continue;const t0=Date.now();
+  try{const r=await fetch('https://'+n.domain+'/health',{signal:AbortSignal.timeout(8000),redirect:'manual'});n.up=r.ok&&(await r.text()).trim()==='ok';n.ms=n.up?Date.now()-t0:null}catch(e){n.up=false;n.ms=null}n.checked=Date.now()}}
+if(!NODE_MODE){setInterval(probeNodes,60000);setTimeout(probeNodes,8000)}
+if(NODE_MODE){
+  const MASTER=String(process.env.MASTER_URL).replace(/\/+$/,''),NT=process.env.NODE_TOKEN;
+  const call=(p,opt)=>fetch(MASTER+p,{...opt,headers:{authorization:'Bearer '+NT,'content-type':'application/json'},signal:AbortSignal.timeout(15000)});
+  async function nodeSync(){try{const r=await call('/node/sync');if(!r.ok)throw new Error('master said HTTP '+r.status);const j=await r.json();
+    db.users=(j.users||[]).map(x=>({id:String(x.id),name:String(x.name||'').slice(0,30),on:true,limit:0,exp:0,used:0,maxDev:0,created:0}));
+    db.inbounds=(j.inbounds||[]).map(i=>({id:i.id,name:i.name,proto:i.proto,net:i.net,path:i.path,port:+i.port,on:true}));
+    blocks.clear();(j.blocks||[]).forEach(b=>blocks.set(b.uid+'|'+b.rule,{uid:b.uid,rule:b.rule,exp:Date.now()+300000}));
+    nodeErr='';if(sig()!==lastSig)startXray()}catch(e){nodeErr=e.message;console.log('[node] sync failed:',e.message)}}
+  async function nodeReport(){const used=NODE_PEND;NODE_PEND={};const ips={};
+    for(const uid of online.keys()){const o=onlineOf(uid);if(o.length)ips[uid]=o.map(e=>e.ip)}
+    try{const r=await call('/node/report',{method:'POST',body:JSON.stringify({used,ips,cc:SRV_CC})});if(!r.ok)throw new Error('HTTP '+r.status)}
+    catch(e){for(const k in used)NODE_PEND[k]=(NODE_PEND[k]||0)+used[k];console.log('[node] report failed:',e.message)}}
+  setTimeout(nodeSync,500);setInterval(nodeSync,15000);setInterval(nodeReport,10000);
+  console.log('[node] running as worker for',MASTER);
+}
+
 // ---------- SSH over WebSocket (payload mode): per-user accounts, byte accounting, device limit, private-network block ----------
 let ssh2=null;try{ssh2=require('ssh2')}catch(e){console.log('[ssh] ssh2 module not installed: SSH disabled')}
 const dnsP=require('dns').promises;
@@ -592,6 +630,13 @@ if(db.settings.sshOn){ensureSsh();sshInit()}
 
 http.createServer(async(req,res)=>{
   const U=new URL(req.url,'http://x'),u=U.pathname,h=hostOf(req),addr=cleanAddr(U.searchParams.get('addr'));
+  if(NODE_MODE){if(u==='/health')return res.end('ok');res.writeHead(404);return res.end('Not found')}
+  if(u==='/node/sync'&&req.method==='GET'){const n=nodeAuth(req);if(!n)return J(res,{e:1},401);n.lastSeen=Date.now();
+    return J(res,{users:db.users.filter(isActive).map(x=>({id:x.id,name:x.name})),inbounds:db.inbounds.filter(i=>i.on&&!i.egress).map(i=>({id:i.id,name:i.name,proto:i.proto,net:i.net,path:i.path,port:i.port})),blocks:[...blocks.values()].map(b=>({uid:b.uid,rule:b.rule}))})}
+  if(u==='/node/report'&&req.method==='POST'){const n=nodeAuth(req);if(!n)return J(res,{e:1},401);const b=await body(req);
+    if(b.used&&typeof b.used==='object')for(const id of Object.keys(b.used).slice(0,5000)){const x=db.users.find(v=>v.id===id),d=+b.used[id];if(x&&d>0&&d<1e12){x.used+=d;addTraffic(x,d)}}
+    if(b.ips&&typeof b.ips==='object')for(const id of Object.keys(b.ips).slice(0,5000)){if(!db.users.some(v=>v.id===id))continue;(Array.isArray(b.ips[id])?b.ips[id]:[]).slice(0,20).forEach(ip=>{if(typeof ip==='string'&&ip.length<64)seen(id,ip)})}
+    n.lastSeen=Date.now();if(/^[A-Z]{2}$/.test(String(b.cc||''))&&!n.ccManual)n.cc=b.cc;save();return J(res,{ok:1})}
   if(FILES[u]&&req.method==='GET'){const bufr=u==='/'?Buffer.from(FILES[u].toString().replace('__THEME__','gotham')):FILES[u];return res.writeHead(200,{'content-type':STATIC[u][1],'cache-control':u==='/bg.svg'?'public,max-age=86400':'no-cache'}),res.end(bufr)}
   if(u.startsWith('/fonts/')){const f=fontFile(u.slice(7));if(!f){res.writeHead(404);return res.end()}res.writeHead(200,{'content-type':'font/woff2','cache-control':'public,max-age=31536000,immutable'});return fs.createReadStream(f).pipe(res)}
   if(u==='/health')return res.end('ok');
@@ -646,7 +691,7 @@ http.createServer(async(req,res)=>{
       pup:process.uptime(),load:os.loadavg(),conns,online:onlineSummary(),region:process.env.RAILWAY_REPLICA_REGION||process.env.RAILWAY_REGION||'—',
       xray:{on:!!(xray&&xray.exitCode===null),mem:xrayMem(),err:xrayErr}});
     if(u==='/api/state'){if(sshOn())ensureSsh();
-      const D=dates14(),hh=effHost(req,h);return J(res,{host:hh,realHost:h,settings:{linkExtra:linkExtra(),subInfo:subInfoOn(),locName:db.settings.locName||'',nameStyle:NAME_STYLES.includes(db.settings.nameStyle)?db.settings.nameStyle:'bold',autoLoc:styleText(autoLoc()),sshOn:!!db.settings.sshOn,sshReady:!!ssh2,addr:db.settings.addr,host:db.settings.host||'',fallback:db.settings.fallback||'',theme:'gotham',plans:Array.isArray(db.settings.plans)?db.settings.plans:[],payCard:db.settings.payCard||'',payUrl:db.settings.payUrl||'',botUser:db.settings.botUser||'',hasBotToken:!!db.settings.botToken,scanAuto:!!db.settings.scanAuto,scanEveryH:Math.max(1,Math.min(72,+db.settings.scanEveryH||12)),sources:srcList(),...contact(),...repoCfg(),auto:!!db.settings.auto,hasToken:!!db.settings.token},version:curVersion(),inbounds:db.inbounds,daily:{dates:D,total:D.map(d=>(db.daily||{})[d]||0)},
+      const D=dates14(),hh=effHost(req,h);return J(res,{host:hh,realHost:h,settings:{linkExtra:linkExtra(),subInfo:subInfoOn(),locName:db.settings.locName||'',nameStyle:NAME_STYLES.includes(db.settings.nameStyle)?db.settings.nameStyle:'bold',autoLoc:styleText(autoLoc()),sshOn:!!db.settings.sshOn,sshReady:!!ssh2,addr:db.settings.addr,host:db.settings.host||'',fallback:db.settings.fallback||'',theme:'gotham',plans:Array.isArray(db.settings.plans)?db.settings.plans:[],payCard:db.settings.payCard||'',payUrl:db.settings.payUrl||'',botUser:db.settings.botUser||'',hasBotToken:!!db.settings.botToken,scanAuto:!!db.settings.scanAuto,scanEveryH:Math.max(1,Math.min(72,+db.settings.scanEveryH||12)),sources:srcList(),...contact(),...repoCfg(),auto:!!db.settings.auto,hasToken:!!db.settings.token},version:curVersion(),inbounds:db.inbounds,nodes:(db.nodes||[]).map(nodePub),daily:{dates:D,total:D.map(d=>(db.daily||{})[d]||0)},
         users:db.users.map(x=>({...pubUser(x,hh,addr,true),...(sshOn()&&x.ssh?{ssh:x.ssh}:{})})),totalUsed:db.users.reduce((a,x)=>a+x.used,0)});
     }
     if(u==='/api/backup')return J(res,{ok:1,at:Date.now(),db});
@@ -715,6 +760,22 @@ http.createServer(async(req,res)=>{
     if(u==='/api/scan'){if(!CF.length)return J(res,{e:'لیست ساب‌نت موجود نیست'},400);
       const sni=/^[\w.-]{3,100}$/.test(b.sni||'')?b.sni:'speed.cloudflare.com';return J(res,await scan(sni,Math.min(200,Math.max(10,+b.count||60))))}
     if(u==='/api/diag')return J(res,await runDiag(effHost(req,h)));
+    if(u==='/api/nodes'&&req.method==='GET')return J(res,{nodes:db.nodes.map(nodePub)});
+    if(u==='/api/nodes'&&req.method==='POST'){
+      const dom=cleanDomain(b.domain);if(dom===null)return J(res,{e:'دامنه نامعتبره'},400);
+      const cc=String(b.cc||'').trim().toUpperCase();if(cc&&!/^[A-Z]{2}$/.test(cc))return J(res,{e:'کد کشور باید دو حرف باشه (مثل NL)'},400);
+      if(db.nodes.length>=30)return J(res,{e:'حداکثر ۳۰ نود'},400);
+      const token=crypto.randomBytes(24).toString('hex');
+      const n={id:'N'+Date.now().toString(36),name:keepName(b.name)||'Node',domain:dom,cc,ccManual:!!cc,label:keepName(b.label),on:true,all:!!b.all,tokenHash:sha256(token),created:Date.now()};
+      db.nodes.push(n);save();return J(res,{ok:1,node:nodePub(n),token,master:'https://'+effHost(req,h)})}
+    if(u==='/api/node/update'){const n=db.nodes.find(v=>v.id===b.id);if(!n)return J(res,{e:1},404);let token=null;
+      if(b.name!=null)n.name=keepName(b.name)||n.name;if(b.label!=null)n.label=keepName(b.label);
+      if(b.domain!=null){const d=cleanDomain(b.domain);if(d===null)return J(res,{e:'دامنه نامعتبره'},400);n.domain=d;n.up=null;n.ms=null}
+      if(b.cc!=null){const c=String(b.cc).trim().toUpperCase();if(c&&!/^[A-Z]{2}$/.test(c))return J(res,{e:'کد کشور باید دو حرف باشه'},400);n.cc=c;n.ccManual=!!c}
+      if(b.on!=null)n.on=!!b.on;if(b.all!=null)n.all=!!b.all;
+      if(b.regen){token=crypto.randomBytes(24).toString('hex');n.tokenHash=sha256(token)}
+      save();return J(res,{ok:1,node:nodePub(n),token,master:'https://'+effHost(req,h)})}
+    if(u==='/api/node/del'){db.nodes=db.nodes.filter(v=>v.id!==b.id);save();return J(res,{ok:1})}
     if(u==='/api/locs')return J(res,{locs:db.locs||[],sources:srcList(),defaults:DEFAULT_SOURCES,
       health:{on:db.settings.locHealth!==false,everyMin:Math.max(5,Math.min(720,+db.settings.locHealthMin||30)),checkedAt:lastLocCheck}});
     if(u==='/api/loc/add'){const host=String(b.host||'').trim().toLowerCase().replace(/^https?:\/\//,'').split(/[/:]/)[0];

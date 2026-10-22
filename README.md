@@ -238,3 +238,14 @@ MIT — do whatever you want, attribution appreciated.
 - موتور: [Xray-core](https://github.com/XTLS/Xray-core)
 
 </div>
+
+## Worker nodes (multiple locations)
+
+Run the same repo as extra projects and let the master panel manage them:
+
+1. Panel -> Nodes -> New node. Copy the three variables shown once (`NODE_MODE`, `MASTER_URL`, `NODE_TOKEN`).
+2. Create a new project from this repo (pick the region you want) and paste the variables.
+3. Give it a domain (target port 8080) and save that domain on the node in the panel.
+
+The node has no panel: it pulls active users and inbounds from the master every 15 s, reports traffic and online IPs every 10 s,
+and its link appears in every user's subscription named after its location. Volume, expiry and device limits are shared.
