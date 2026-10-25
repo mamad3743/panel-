@@ -377,3 +377,12 @@ button .svgi{width:1.1em;height:1.1em}
 .nd b{display:block;font-size:14.5px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .nd small{display:block;margin-top:3px;color:var(--mu);font:11px var(--fm);direction:ltr;text-align:start;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .envb{direction:ltr;text-align:left;font:12px/1.9 var(--fm);background:rgba(0,0,0,.35);border:1px solid var(--line);border-radius:12px;padding:10px 12px;word-break:break-all;white-space:pre-wrap;user-select:all}
+
+/* ===== v10.1: dock + button (own size, raised above the bar, strong contrast) ===== */
+.dock{align-items:center;overflow:visible}
+.dock .fab{all:unset;box-sizing:border-box;display:grid;place-items:center;flex:none;width:50px;height:50px;margin:0 8px;border-radius:50%;cursor:pointer;color:#fff;
+ background:linear-gradient(135deg,var(--ac1),var(--ac2));border:3px solid var(--bg);box-shadow:0 10px 22px -6px rgba(var(--rgb2),.95);
+ transform:translateY(-14px);transition:transform .15s;-webkit-tap-highlight-color:transparent}
+.dock .fab:active{transform:translateY(-14px) scale(.92)}
+.dock .fab svg{width:24px;height:24px;fill:none;stroke:currentColor;stroke-width:2.7;stroke-linecap:round;stroke-linejoin:round}
+.dock button{min-width:54px}

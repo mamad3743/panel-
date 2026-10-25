@@ -28,7 +28,7 @@
 .x-note.bad{background:rgba(239,107,127,.1);border-color:rgba(239,107,127,.34);color:var(--bad)}
 .x-note.info{background:rgba(var(--rgb),.1);border-color:rgba(var(--rgb),.3);color:var(--tx);white-space:pre-line}
 /* top: status + side */
-.x-top{display:grid;grid-template-columns:1fr;gap:14px}
+.x-top{display:grid;grid-template-columns:minmax(0,1fr);gap:14px}
 .x-st{--sc:var(--ok);overflow:hidden;padding:20px}
 .x-st.warn{--sc:var(--warn)}.x-st.bad{--sc:var(--bad)}
 .x-st:after{content:"";position:absolute;inset:0;background:radial-gradient(120% 90% at 100% 0,var(--sc),transparent 62%);opacity:.11;pointer-events:none}
@@ -49,13 +49,13 @@
 .x-ring .mid{position:absolute;inset:0;display:grid;place-items:center;text-align:center;color:var(--tx)}
 .x-ring .mid b{display:block;font-family:var(--fm);font-size:21px;font-weight:700;line-height:1;direction:ltr}
 .x-ring .mid small{display:block;font-size:10.5px;color:var(--mu);margin-top:5px}
-.x-rows{flex:1;min-width:0;display:grid;gap:11px}
+.x-rows{flex:1;min-width:0;max-width:400px;display:grid;gap:11px}
 .x-rw{display:flex;justify-content:space-between;align-items:center;gap:8px;font-size:13px;color:var(--mu)}
 .x-rw b{font-family:var(--fm);color:var(--tx);font-weight:600;white-space:nowrap;direction:ltr}
 .x-rw.g b{color:var(--sc)}
 .x-bar{height:6px;border-radius:9px;background:rgba(255,255,255,.07);overflow:hidden}
 .x-bar i{display:block;height:100%;width:0;border-radius:9px;background:var(--sc);transition:width 1.4s cubic-bezier(.2,.8,.2,1);box-shadow:0 0 10px var(--sc)}
-.x-side{display:grid;gap:14px;grid-template-columns:1fr 1fr}
+.x-side{display:grid;gap:14px;grid-template-columns:repeat(2,minmax(0,1fr))}
 .x-side>:last-child{grid-column:1/-1}
 .x-sc{padding:15px 16px}
 .x-sc .x-lab{margin-bottom:8px}
@@ -125,6 +125,7 @@
 .x-tgc b{display:block;font-size:14px;font-weight:700}
 .x-tgc small{font:12px var(--fm);color:var(--mu);direction:ltr;display:block;text-align:start}
 .x-tgc .go{margin-inline-start:auto;flex:none;color:var(--mu)}
+html,body{overflow-x:hidden}
 html[dir=rtl] .x-tgc .go{transform:scaleX(-1)}
 .x-foot{text-align:center;font-size:11.5px;color:var(--mu);padding:10px 0 0;direction:ltr;letter-spacing:.5px}
 .x-foot b{color:var(--tx);letter-spacing:.3em}
@@ -143,10 +144,9 @@ html[dir=rtl] .x-tgc .go{transform:scaleX(-1)}
 .hide{display:none!important}
 @media(min-width:760px){
  .x-wrap{padding-top:34px;gap:16px}
- .x-top{grid-template-columns:1.9fr 1fr}
- .x-side{grid-template-columns:1fr}
  .x-main{grid-template-columns:minmax(0,1.1fr) minmax(0,1fr);grid-template-areas:"cfg sub" "cfg apps" "cfg extra" "cfg help" "cfg tg";grid-template-rows:auto auto auto auto 1fr;align-items:start}
 }
+@media(min-width:560px){.x-side{grid-template-columns:repeat(3,minmax(0,1fr))}.x-side>:last-child{grid-column:auto}}
 @media(max-width:380px){.x-apps{grid-template-columns:repeat(2,1fr)}.x-stb{gap:14px}.x-ring{width:96px;height:96px}}
 @media(prefers-reduced-motion:reduce){*,*::before,*::after{animation:none!important;transition:none!important}}
 </style></head><body><div class="bgimg"></div>
@@ -250,7 +250,7 @@ html[dir=rtl] .x-tgc .go{transform:scaleX(-1)}
   <div class="x-qr" id="shQ"></div>
   <div class="x-two"><button type="button" class="xb" id="shCp"><svg width="15" height="15"><use href="#i-copy"/></svg><span>کپی</span></button><button type="button" class="xb gh" id="shX"><svg width="15" height="15"><use href="#i-x"/></svg><span>بستن</span></button></div>
 </div></div>
-<div class="x-toast" id="toast"><span class="o"><svg width="14" height="14" id="toastI"><use href="#i-ok"/></svg></span><span id="toastT"></span></div>
+<div class="x-toast" id="xtoast"><span class="o"><svg width="14" height="14" id="toastI"><use href="#i-ok"/></svg></span><span id="toastT"></span></div>
 
 <script>
 var D=__DATA__,$=function(i){return document.getElementById(i)};
@@ -260,7 +260,7 @@ function B(n){n=+n||0;if(n<1048576)return'0 MB';var u=['MB','GB','TB'],i=0;n/=10
 function jdate(ms){try{return new Intl.DateTimeFormat('fa-IR-u-ca-persian',{year:'numeric',month:'long',day:'numeric'}).format(new Date(ms))}catch(e){return''}}
 function left(ms){var s=Math.max(0,Math.floor(ms/1000)),d=Math.floor(s/86400),h=Math.floor(s%86400/3600),m=Math.floor(s%3600/60);return d>0?d+'d '+h+'h':(h>0?h+'h '+m+'m':m+'m')}
 /* toast + copy */
-var tt;function toast(t,err){$('toastT').textContent=t;var e=$('toast');e.classList.toggle('err',!!err);$('toastI').innerHTML='<use href="#i-'+(err?'x':'ok')+'"/>';e.classList.add('on');clearTimeout(tt);tt=setTimeout(function(){e.classList.remove('on')},1700)}
+var tt;function toast(t,err){$('toastT').textContent=t;var e=$('xtoast');e.classList.toggle('err',!!err);$('toastI').innerHTML='<use href="#i-'+(err?'x':'ok')+'"/>';e.classList.add('on');clearTimeout(tt);tt=setTimeout(function(){e.classList.remove('on')},1700)}
 function buzz(){try{navigator.vibrate&&navigator.vibrate(15)}catch(e){}}
 function oldCopy(t){var a=document.createElement('textarea');a.value=t;a.setAttribute('readonly','');a.style.cssText='position:fixed;top:0;left:-9999px;opacity:0';document.body.appendChild(a);a.select();var r=false;try{r=document.execCommand('copy')}catch(e){}a.remove();return r}
 function copy(t,msg,el){t=String(t||'');if(!t)return;
