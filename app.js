@@ -49,7 +49,17 @@ function moreMenu(){modal('بیشتر','<div class="mm">'+MORE.map(function(m){r
 $('dock').onclick=function(e){var b=e.target.closest('button');if(!b)return;var t=b.dataset.t;if(t=='plus'){newUser();return}if(t=='more'){moreMenu();return}TAB=t;localStorage.tab=TAB;dock();render();window.scrollTo(0,0)};
 function loadState(quiet){return api('GET','/api/state'+AD()).then(function(d){S=d;(S.inbounds||[]).forEach(function(i){i.name=noEmo(i.name)});
  SEL.forEach(function(id){if(!S.users.some(function(u){return u.id==id}))SEL.delete(id)});
- if(!quiet||TAB!='users'||!document.querySelector('.ov:not(.hide)'))render()})}
+ if(quiet)softRefresh();else render()})}
+function kpi(){var now=Date.now(),ns=S.nodes||[];return{u:S.users.length,t:B((S.daily&&S.daily.total?S.daily.total[S.daily.total.length-1]:0)||0),
+ e:S.users.filter(function(u){return u.status=='active'&&((u.exp&&u.exp-now<3*864e5)||(u.limit&&u.used/u.limit>=.9))}).length,n:ns.filter(function(n){return n.connected}).length+'/'+ns.length}}
+function softRefresh(){
+ if(document.querySelector('.ov:not(.hide)'))return;
+ if(TAB=='users'&&$('ul')){var y=window.scrollY,c={all:S.users.length,active:0,expired:0,off:0};
+  S.users.forEach(function(u){if(u.status=='active')c.active++;else if(u.status=='off')c.off++;else c.expired++});
+  Array.prototype.forEach.call(document.querySelectorAll('#fc .fc'),function(e){var i=e.querySelector('i');if(i)i.textContent=c[e.dataset.f]});
+  var p=document.querySelector('#view .sec .pill');if(p)p.textContent=S.users.length;
+  ulist();window.scrollTo(0,y)}
+ else if(TAB=='dash'&&$('k_u')){var k=kpi();put('k_u',k.u);put('k_t',k.t);put('k_e',k.e);put('k_n',k.n)}}
 /* ---------- sys ---------- */
 function bar(id,p){var e=$(id);if(!e)return;e.style.width=Math.min(100,Math.max(1,p))+'%';e.className=p>90?'d':p>75?'w':''}
 function put(id,v){var e=$(id);if(e)e.textContent=v}
@@ -85,7 +95,8 @@ function paintNodes(){var l=$('nl');if(!l)return;var ns=S.nodes||[];
  l.onclick=function(e){var t=e.target.closest('[data-nt]'),b=e.target.closest('[data-ne]');
   if(t){var n=ns.filter(function(x){return x.id==t.dataset.nt})[0];api('POST','/api/node/update',{id:n.id,on:!n.on}).then(loadNodes)}
   if(b)nodeEdit(ns.filter(function(x){return x.id==b.dataset.ne})[0])}}
-function loadNodes(){return api('GET','/api/nodes').then(function(r){S.nodes=r.nodes;paintNodes()})}
+var NLAST='';
+function loadNodes(){return api('GET','/api/nodes').then(function(r){S.nodes=r.nodes;var h=JSON.stringify(r.nodes);if(h===NLAST&&$('nl')&&$('nl').firstChild)return;NLAST=h;paintNodes()})}
 function vNodes(v){v.innerHTML='<div class="sec"><h2>نودها</h2><button class="sm p" id="nnew">+ نود جدید</button></div><div class="ug" id="nl"></div><div class="card" style="margin-top:14px"><h3><span>چطور کار می‌کنه</span></h3><p class="hint2">هر نود یک پروژه جداست (مثلاً یک پروژه Railway دیگه با ریجن متفاوت) که از همین ریپو ساخته می‌شه. نود کاربرها رو از همین پنل می‌گیره و حجم مصرفی رو برمی‌گردونه، پس حجم و انقضا و محدودیت دستگاه مشترکه. کانفیگ هر نود خودکار با اسم لوکیشنش توی اشتراک همه کاربرها میاد. نود فقط VLESS روی WS می‌ده، مگه اینکه «همه پروتکل‌ها» رو روشن کنی.</p></div>';
  $('nnew').onclick=nodeNew;paintNodes();loadNodes();clearInterval(NTM);NTM=setInterval(function(){if(TAB=='nodes')loadNodes();else clearInterval(NTM)},8000)}
 function nodeEnv(r){var env='NODE_MODE=1\nMASTER_URL='+r.master+'\nNODE_TOKEN='+r.token;
@@ -99,11 +110,11 @@ function nodeEdit(n){modal('ویرایش نود','<span class="lab">نام</span
  $('eok').onclick=function(){api('POST','/api/node/update',{id:n.id,name:$('e1').value,domain:$('e2').value,cc:$('e3').value,label:$('e5').value,all:$('e4').classList.contains('on')}).then(function(){closeM();toast('ذخیره شد');loadNodes()})};
  $('erg').onclick=function(){ask('توکن قبلی از کار می‌افته. ادامه؟',function(){api('POST','/api/node/update',{id:n.id,regen:1}).then(function(r){nodeEnv(r)})})};
  $('edl').onclick=function(){ask('نود «'+esc(n.name)+'» حذف بشه؟',function(){api('POST','/api/node/del',{id:n.id}).then(function(){toast('حذف شد');loadNodes()})})}}
-function render(){var v=$('view');v.classList.remove('vw');void v.offsetWidth;v.classList.add('vw');(({dash:vDash,users:vUsers,nodes:vNodes,inb:vInb,scan:vScan,loc:vLoc,set:vSet})[TAB]||vDash)(v)}
-function heroHTML(gr){var tdy=(S.daily&&S.daily.total?S.daily.total[S.daily.total.length-1]:0)||0,now=Date.now(),ns=S.nodes||[],up=ns.filter(function(n){return n.connected}).length,
- ex=S.users.filter(function(u){return u.status=='active'&&((u.exp&&u.exp-now<3*864e5)||(u.limit&&u.used/u.limit>=.9))}).length;
+var RT='';
+function render(){var v=$('view'),same=(RT===TAB),y=window.scrollY;v.classList.remove('vw');void v.offsetWidth;v.classList.add('vw');(({dash:vDash,users:vUsers,nodes:vNodes,inb:vInb,scan:vScan,loc:vLoc,set:vSet})[TAB]||vDash)(v);RT=TAB;if(same)window.scrollTo(0,y)}
+function heroHTML(gr){var k=kpi();
  return '<div class="card cmd"><div class="rad"><span class="r1"></span><span class="r2"></span><b id="on1">'+(ONL?ONL.users:'—')+'</b></div><div class="cmd-t"><small>'+gr+'</small><h2>آنلاین الان</h2><span class="sub2" id="on2">'+(ONL?ONL.devices+' devices':'')+'</span></div></div>'+
- '<div class="sg"><div class="sc"><small>USERS</small><b>'+S.users.length+'</b></div><div class="sc"><small>TODAY</small><b>'+B(tdy)+'</b></div><div class="sc"><small>EXPIRING</small><b>'+ex+'</b></div><div class="sc"><small>NODES</small><b>'+up+'/'+ns.length+'</b></div></div>'}
+ '<div class="sg"><div class="sc"><small>USERS</small><b id="k_u">'+k.u+'</b></div><div class="sc"><small>TODAY</small><b id="k_t">'+k.t+'</b></div><div class="sc"><small>EXPIRING</small><b id="k_e">'+k.e+'</b></div><div class="sc"><small>NODES</small><b id="k_n">'+k.n+'</b></div></div>'}
 function gg(id,l){return '<div class="gg"><svg viewBox="0 0 80 80"><circle class="tr" cx="40" cy="40" r="34"/><circle class="pg" id="g_'+id+'" cx="40" cy="40" r="34" stroke-dasharray="0 214"/></svg><b id="gv_'+id+'">—</b><small>'+l+'</small></div>'}
 function vDash(v){var act=S.users.filter(function(u){return u.status=='active'}).length,hr=new Date().getHours(),gr=hr<5?'شب بخیر':hr<12?'صبح بخیر':hr<18?'روز بخیر':'عصر بخیر';
  v.innerHTML=heroHTML(gr)+trafficCard()+'<div class="g2"><div class="card"><h3><span>Server</span><span id="rg" style="letter-spacing:1px"></span></h3><div class="gs">'+gg('cpu','CPU')+gg('ram','RAM')+gg('dsk','DISK')+'</div>'+
@@ -121,7 +132,7 @@ function expCard(){var l=S.users.filter(function(u){return u.status=='active'&&u
 function topCard(){var l=S.users.slice().sort(function(a,b){return b.used-a.used}).slice(0,5),mx=Math.max.apply(null,l.map(function(u){return u.used}).concat([1]));
   return '<div class="card" style="margin-top:14px"><h3><span>Top users</span></h3>'+(l.length?l.map(function(u){return '<div class="t5"><span class="n">'+esc(u.name)+'</span><div class="bar"><i style="width:'+Math.max(2,u.used/mx*100)+'%"></i></div><span class="s">'+B(u.used)+'</span></div>'}).join(''):'<div class="empty">—</div>')+'</div>'}
 function uRing(u,pct){return '<svg viewBox="0 0 36 36"><circle class="tk" cx="18" cy="18" r="15"/><circle class="pg" cx="18" cy="18" r="15" style="stroke-dasharray:'+(u.limit?(pct/100*94.25).toFixed(1):'94.25')+' 94.25"/></svg>'}
-function uCard(u){var pct=u.limit?Math.min(100,u.used/u.limit*100):0,now=Date.now(),
+function uCard(u){u.days=u.days||[];var pct=u.limit?Math.min(100,u.used/u.limit*100):0,now=Date.now(),
  st={active:'فعال',off:'غیرفعال',expired:'منقضی',limited:'حجم تمام'}[u.status],
  near=u.status=='active'&&((u.exp&&u.exp-now<3*864e5)||(u.limit&&pct>=90)),
  cls=u.status=='active'?(near?'warn':''):(u.status=='off'?'off':'bad'),
@@ -136,7 +147,7 @@ function uCard(u){var pct=u.limit?Math.min(100,u.used/u.limit*100):0,now=Date.no
  '<div class="chips">'+u.links.map(function(l){return '<span class="chip" data-a="cfg" data-i="'+id+'" data-k="'+l.k+'">'+esc(noEmo(l.loc||l.n))+'</span>'}).join('')+'</div>'+
  '<div class="ac"><button class="sm p" data-a="sub" data-i="'+id+'">لینک اشتراک</button><button class="sm" data-a="pg" data-i="'+id+'">صفحه</button><button class="sm" data-a="ed" data-i="'+id+'">ویرایش</button>'+(S.settings.sshOn&&u.ssh?'<button class="sm" data-a="ssh" data-i="'+id+'">SSH</button>':'')+'</div></div></div>'}
 function qUpd(u,p,msg){p.id=u.id;api('POST','/api/user/update',p).then(function(){toast(msg);loadState()})}
-var FL='all',OPEN=new Set(),SEL=new Set(),SORT=localStorage.sort||'new';
+var ULIM=100,FL='all',OPEN=new Set(),SEL=new Set(),SORT=localStorage.sort||'new';
 function bulkUI(){var n=SEL.size,e=$('bulk');if(e)e.classList.toggle('on',n>0);var c=$('bcnt');if(c)c.textContent=n+' انتخاب'}
 function bulkDo(a){var ids=Array.from(SEL);if(!ids.length)return toast('اول چند کاربر رو تیک بزن');var p={action:a,ids:ids};if(a=='extend')p.days=+$('bd').value||30;
  var go=function(){api('POST','/api/users/bulk',p).then(function(){SEL.clear();toast('انجام شد');loadState()})};
@@ -147,7 +158,7 @@ function vUsers(v){var c={all:S.users.length,active:0,expired:0,off:0};S.users.f
  '<div class="fch" id="fc">'+[['all','همه'],['active','فعال'],['expired','منقضی'],['off','غیرفعال']].map(function(f){return '<span class="fc'+(FL==f[0]?' on':'')+'" data-f="'+f[0]+'">'+f[1]+'<i>'+c[f[0]]+'</i></span>'}).join('')+'</div>'+
  '<div class="srow"><span>مرتب‌سازی</span><select id="sort"><option value="new">جدیدترین</option><option value="used">پر‌مصرف‌ترین</option><option value="name">نام (الفبا)</option><option value="exp">انقضای نزدیک</option></select></div>'+
  '<div class="bulk" id="bulk"><label><input type="checkbox" id="sall"> همه</label><b id="bcnt">0 انتخاب</b><input id="bd" type="number" min="1" max="3650" value="30"><button class="sm" id="bext">+ تمدید</button><button class="sm" id="brs">ریست ترافیک</button><button class="sm x" id="bdel">حذف</button><button class="sm" id="bclr">'+ico('x')+'</button></div><div class="ug" id="ul"></div>';
- $('nu').onclick=newUser;$('q').oninput=function(){Q=this.value;ulist()};$('fc').onclick=function(e){var t=e.target.closest('[data-f]');if(!t)return;FL=t.dataset.f;vUsers(v)};
+ $('nu').onclick=newUser;$('q').oninput=function(){Q=this.value;ULIM=100;ulist()};$('fc').onclick=function(e){var t=e.target.closest('[data-f]');if(!t)return;FL=t.dataset.f;ULIM=100;vUsers(v)};
  $('sall').onchange=function(){var bx=document.querySelectorAll('.uck');if(this.checked){bx.forEach(function(x){x.checked=true;SEL.add(x.dataset.i)})}else{bx.forEach(function(x){x.checked=false});SEL.clear()}bulkUI()};
  $('bclr').onclick=function(){SEL.clear();ulist()};$('brs').onclick=function(){bulkDo('reset')};$('bdel').onclick=function(){bulkDo('delete')};$('bext').onclick=function(){bulkDo('extend')};
  $('sort').value=SORT;$('sort').onchange=function(){SORT=this.value;localStorage.sort=SORT;ulist()};
@@ -157,8 +168,8 @@ function ulist(){var l=S.users.filter(function(u){var m=u.name.toLowerCase().ind
  else if(SORT=='name')l.sort(function(a,b){return String(a.name).localeCompare(String(b.name),'fa')});
  else if(SORT=='exp')l.sort(function(a,b){return (a.exp||Infinity)-(b.exp||Infinity)});
  else l.sort(function(a,b){return b.created-a.created});
- $('ul').innerHTML=l.length?l.map(uCard).join(''):'<div class="empty" style="grid-column:1/-1">کاربری پیدا نشد</div>';bulkUI()}
-document.addEventListener('click',function(e){var k=e.target.closest('[data-kick]');
+ var more=l.length>ULIM;$('ul').innerHTML=l.length?l.slice(0,ULIM).map(uCard).join('')+(more?'<button class="sm" id="umore" style="align-self:center;margin-top:6px">نمایش بیشتر ('+(l.length-ULIM)+')</button>':''):'<div class="empty" style="grid-column:1/-1">کاربری پیدا نشد</div>';bulkUI()}
+document.addEventListener('click',function(e){if(e.target.closest&&e.target.closest('#umore')){ULIM+=100;ulist();return}var k=e.target.closest('[data-kick]');
  if(k){e.stopPropagation();ask('اتصال '+esc(k.dataset.kick)+' قطع بشه؟ (۳۰ دقیقه بلاک)',function(){api('POST','/api/user/kick',{id:k.dataset.uid,rule:k.dataset.kick}).then(function(){toast('قطع شد');sys()})});return}
  var b=e.target.closest('#ul [data-a]');if(!b)return;var i=b.dataset.i,a=b.dataset.a,u=S.users.filter(function(x){return x.id==i})[0];
  if(a=='cfg'){var l=u.links.filter(function(x){return x.k==b.dataset.k})[0];cp(l.l,l.n+' کپی شد')}

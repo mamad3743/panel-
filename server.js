@@ -1,4 +1,6 @@
 // BATAMN v3 — Xray panel: users (traffic/expiry), inbounds, scanner, settings — single HTTP port
+process.on('uncaughtException',e=>console.log('[fatal-guard] uncaughtException:',e&&e.stack||e));
+process.on('unhandledRejection',e=>console.log('[fatal-guard] unhandledRejection:',e&&e.stack||e));
 const http=require('http'),net=require('net'),tls=require('tls'),fs=require('fs'),os=require('os'),path=require('path'),crypto=require('crypto'),{spawn,execFile}=require('child_process');
 let qrlib=null;try{qrlib=require('qrcode-generator')}catch(e){console.log('qr disabled')}
 const PORT=process.env.PORT||8080;
@@ -16,7 +18,7 @@ const NODE_MODE=process.env.NODE_MODE==='1'&&!!process.env.MASTER_URL&&!!process
 let NODE_PEND={},nodeErr='';
 let db;
 if(NODE_MODE)db={secret:'node',settings:{addr:'',theme:'gotham',pass:crypto.randomBytes(16).toString('hex')},inbounds:[],users:[],locs:[],nodes:[]};
-else try{db=JSON.parse(fs.readFileSync(DBF))}catch(e){
+else try{db=readDb()}catch(e){
   let old=[];try{old=JSON.parse(fs.readFileSync(OLD))}catch(_){}
   db={secret:crypto.randomBytes(24).toString('hex'),settings:{addr:'',theme:'gotham',pass:process.env.ADMIN_PASS||'admin'},
     inbounds:DEF_IN.map((x,i)=>({id:'i'+(i+1),port:10000+i,on:true,...x})),
@@ -24,7 +26,12 @@ else try{db=JSON.parse(fs.readFileSync(DBF))}catch(e){
   save();
 }
 if(db.settings.theme!=='gotham'){db.settings.theme='gotham';try{save()}catch(e){}}
-function save(){if(NODE_MODE)return;fs.writeFileSync(DBF,JSON.stringify(db,null,1))}
+function save(){if(NODE_MODE)return;const tmp=DBF+'.tmp';fs.writeFileSync(tmp,JSON.stringify(db,null,1));
+  try{if(fs.existsSync(DBF))fs.copyFileSync(DBF,DBF+'.bak')}catch(e){}
+  fs.renameSync(tmp,DBF)}
+function readDb(){for(const f of [DBF,DBF+'.bak']){try{const d=JSON.parse(fs.readFileSync(f,'utf8'));if(d&&Array.isArray(d.users)&&d.settings)return d}catch(e){}}
+  try{if(fs.existsSync(DBF)){const c=DBF+'.corrupt-'+Date.now();fs.renameSync(DBF,c);console.log('[db] db.json unreadable, kept as',c)}}catch(e){}
+  throw new Error('no db')}
 db.nodes=db.nodes||[];
 const F=n=>fs.readFileSync(path.join(__dirname,n));
 const STATIC={'/':['index.html','text/html; charset=utf-8'],'/style.css':['style.css','text/css'],'/app.js':['app.js','application/javascript'],'/bg.svg':['bg.svg','image/svg+xml'],'/speed.js':['speed.js','application/javascript']};
@@ -86,6 +93,7 @@ const blockRules=()=>[...blocks.values()].map(b=>({type:'field',user:[b.uid],sou
 function onlineSummary(){let devs=0,us=0;const per={},list=[];
   for(const u of db.users){const o=onlineOf(u.id);if(o.length){us++;devs+=o.length;per[u.id]=o.length;list.push({id:u.id,name:u.name,ips:o.map(e=>e.ip),max:u.maxDev||0})}}
   return{users:us,devices:devs,per,list:list.slice(0,30),track:Date.now()-ipSeen<600000}}
+setInterval(()=>{const n=Date.now();for(const k in fails)if(n-fails[k].t>600000)delete fails[k];for(const k in sshF)if(n-sshF[k].t>600000)delete sshF[k];for(const k in spQ)if(n-spQ[k].t>120000)delete spQ[k]},300000);
 setInterval(tailAcc,3000);setInterval(enforce,10000);
 
 // ---------- xray ----------
@@ -285,7 +293,12 @@ function infoLinks(x,st){
   }
   return T.map(t=>'vless://00000000-0000-0000-0000-000000000000@127.0.0.1:1?encryption=none&security=none&type=tcp#'+encodeURIComponent(styleText(t)));
 }
-function qrSvg(t){
+const QC=new Map();
+function qrSvg(t){const k=String(t);if(QC.has(k))return QC.get(k);const v=qrSvg0(k);if(QC.size>400)QC.delete(QC.keys().next().value);QC.set(k,v);return v}
+const RL={};
+const rate=(ip,k,max,ms)=>{const key=k+'|'+ip,n=Date.now(),r=RL[key]||(RL[key]={n:0,t:n});if(n-r.t>(ms||60000)){r.n=0;r.t=n}return ++r.n<=max};
+setInterval(()=>{const n=Date.now();for(const k in RL)if(n-RL[k].t>180000)delete RL[k]},120000);
+function qrSvg0(t){
   if(!qrlib)return '';
   try{const q=qrlib(0,'M');q.addData(t);q.make();const n=q.getModuleCount(),m=2;let d='';
     for(let r=0;r<n;r++)for(let c=0;c<n;c++)if(q.isDark(r,c))d+='M'+(c+m)+' '+(r+m)+'h1v1h-1z';
@@ -534,8 +547,15 @@ const cleanHost=s=>{s=String(s||'').trim().toLowerCase().replace(/^https?:\/\//,
 const effHost=(req,h)=>cleanHost(db.settings.host)||process.env.PUBLIC_HOST||process.env.RAILWAY_PUBLIC_DOMAIN||h||hostOf(req);
 const isSecure=req=>{const p=String(req.headers['x-forwarded-proto']||'').toLowerCase();if(p)return p.split(',')[0].trim()!=='http';return !!req.socket.encrypted};
 const sessCookie=(req,tok)=>'bt='+tok+'; HttpOnly; Path=/; Max-Age=2592000; SameSite=Lax'+(isSecure(req)?'; Secure':'');
-const J=(res,o,c=200)=>{res.writeHead(c,{'content-type':'application/json'});res.end(JSON.stringify(o))};
-const body=req=>new Promise(r=>{let b='';req.on('data',c=>{b+=c;if(b.length>1e5)req.destroy()});req.on('end',()=>{try{r(JSON.parse(b||'{}'))}catch(e){r({})}})});
+const zlib=require('zlib');
+const J=(res,o,c=200)=>{const t=JSON.stringify(o),ae=String((res.req&&res.req.headers['accept-encoding'])||'');
+  if(t.length>4096&&/\bgzip\b/.test(ae)){zlib.gzip(t,(e,z)=>{if(res.writableEnded||res.destroyed)return;if(e){res.writeHead(c,{'content-type':'application/json'});return res.end(t)}res.writeHead(c,{'content-type':'application/json','content-encoding':'gzip',vary:'accept-encoding'});res.end(z)})}
+  else{res.writeHead(c,{'content-type':'application/json'});res.end(t)}};
+const body=req=>new Promise(r=>{const lim=req.url.startsWith('/api/restore')?2e7:req.url.startsWith('/node/report')?5e6:1e5;let b='',big=false,done=false;
+  const fin=v=>{if(!done){done=true;r(v)}};
+  req.on('data',c=>{if(big)return;b+=c;if(b.length>lim){big=true;b=''}});
+  req.on('end',()=>{if(big)return fin({__tooBig:1});try{const j=JSON.parse(b||'{}');fin(j&&typeof j==='object'&&!Array.isArray(j)?j:{})}catch(e){fin({})}});
+  req.on('error',()=>fin({}));req.on('close',()=>fin({}))});
 const cleanTg=x=>{x=String(x||'').trim().replace(/^https?:\/\/t\.me\//,'').replace(/^@/,'');return /^[A-Za-z0-9_]{3,40}$/.test(x)?x:''};
 const contact=()=>({support:db.settings.support!=null?db.settings.support:'mamadi1048',channel:db.settings.channel!=null?db.settings.channel:'editmamad_e'});
 const esc=s=>String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
@@ -554,7 +574,7 @@ if(!NODE_MODE){setInterval(probeNodes,60000);setTimeout(probeNodes,8000)}
 if(NODE_MODE){
   const MASTER=String(process.env.MASTER_URL).replace(/\/+$/,''),NT=process.env.NODE_TOKEN;
   const call=(p,opt)=>fetch(MASTER+p,{...opt,headers:{authorization:'Bearer '+NT,'content-type':'application/json'},signal:AbortSignal.timeout(15000)});
-  async function nodeSync(){try{const r=await call('/node/sync');if(!r.ok)throw new Error('master said HTTP '+r.status);const j=await r.json();
+  async function nodeSync(){try{const r=await call('/node/sync');if(!r.ok){if(r.status===401){db.users=[];if(sig()!==lastSig)startXray()}throw new Error('master said HTTP '+r.status)}const j=await r.json();
     db.users=(j.users||[]).map(x=>({id:String(x.id),name:String(x.name||'').slice(0,30),on:true,limit:0,exp:0,used:0,maxDev:0,created:0}));
     db.inbounds=(j.inbounds||[]).map(i=>({id:i.id,name:i.name,proto:i.proto,net:i.net,path:i.path,port:+i.port,on:true}));
     blocks.clear();(j.blocks||[]).forEach(b=>blocks.set(b.uid+'|'+b.rule,{uid:b.uid,rule:b.rule,exp:Date.now()+300000}));
@@ -628,8 +648,10 @@ function sshAttach(req,sock,head){
   try{sshSrv.injectSocket(sock)}catch(e){sock.destroy()}}
 if(db.settings.sshOn){ensureSsh();sshInit()}
 
-http.createServer(async(req,res)=>{
-  const U=new URL(req.url,'http://x'),u=U.pathname,h=hostOf(req),addr=cleanAddr(U.searchParams.get('addr'));
+const SERVER=http.createServer((req,res)=>{HANDLE(req,res).catch(e=>{console.log('[http] handler error:',e&&e.stack||e);try{if(!res.headersSent)res.writeHead(500,{'content-type':'application/json'});res.end('{"e":"server error"}')}catch(_){}})});
+async function HANDLE(req,res){
+  let U0;try{U0=new URL(req.url,'http://x')}catch(e){res.writeHead(400);return res.end('Bad request')}
+  const U=U0,u=U.pathname,h=hostOf(req),addr=cleanAddr(U.searchParams.get('addr'));
   if(NODE_MODE){if(u==='/health')return res.end('ok');res.writeHead(404);return res.end('Not found')}
   if(u==='/node/sync'&&req.method==='GET'){const n=nodeAuth(req);if(!n)return J(res,{e:1},401);n.lastSeen=Date.now();
     return J(res,{users:db.users.filter(isActive).map(x=>({id:x.id,name:x.name})),inbounds:db.inbounds.filter(i=>i.on&&!i.egress).map(i=>({id:i.id,name:i.name,proto:i.proto,net:i.net,path:i.path,port:i.port})),blocks:[...blocks.values()].map(b=>({uid:b.uid,rule:b.rule}))})}
@@ -640,7 +662,7 @@ http.createServer(async(req,res)=>{
   if(FILES[u]&&req.method==='GET'){const bufr=u==='/'?Buffer.from(FILES[u].toString().replace('__THEME__','gotham')):FILES[u];return res.writeHead(200,{'content-type':STATIC[u][1],'cache-control':u==='/bg.svg'?'public,max-age=86400':'no-cache'}),res.end(bufr)}
   if(u.startsWith('/fonts/')){const f=fontFile(u.slice(7));if(!f){res.writeHead(404);return res.end()}res.writeHead(200,{'content-type':'font/woff2','cache-control':'public,max-age=31536000,immutable'});return fs.createReadStream(f).pipe(res)}
   if(u==='/health')return res.end('ok');
-  if(u==='/qr'){const s=qrSvg((U.searchParams.get('d')||'').slice(0,1500));return res.writeHead(s?200:404,{'content-type':'image/svg+xml'}),res.end(s)}
+  if(u==='/qr'){if(!rate(clientIp(req),'qr',40)){res.writeHead(429);return res.end()}const s=qrSvg((U.searchParams.get('d')||'').slice(0,1500));return res.writeHead(s?200:404,{'content-type':'image/svg+xml'}),res.end(s)}
   if(u.startsWith('/speed/')){
     const uid=U.searchParams.get('u'),okU=authed(req)||db.users.some(x=>x.id===uid&&isActive(x));
     if(!okU){res.writeHead(403);return res.end()}
@@ -658,7 +680,7 @@ http.createServer(async(req,res)=>{
   const mf=/^\/sub\/([^/]+)\/manifest$/.exec(u);
   if(mf){const x=db.users.find(v=>v.id===mf[1]);if(!x)return J(res,{e:1},404);
     return J(res,{name:'BATAMN · '+x.name,short_name:'BATAMN',start_url:'/sub/'+x.id,scope:'/sub/'+x.id,display:'standalone',dir:'rtl',lang:'fa',background_color:'#04060a',theme_color:'#04060a',icons:[{src:'/bg.svg',sizes:'any',type:'image/svg+xml',purpose:'any'}]})}
-  if(u.startsWith('/sub/')){
+  if(u.startsWith('/sub/')){if(!rate(clientIp(req),'sub',90)){res.writeHead(429,{'content-type':'text/plain'});return res.end('Too many requests')}
     const x=db.users.find(v=>v.id===u.slice(5)),html=(req.headers.accept||'').includes('text/html')&&!U.searchParams.has('raw');
     if(!x){res.writeHead(404,{'content-type':'text/plain'});return res.end('Not found')}
     const hh=effHost(req,h),st=status(x),L=st==='active'?linksFor(x,hh,addr):[];
@@ -698,9 +720,27 @@ http.createServer(async(req,res)=>{
     if(u==='/api/security')return J(res,{log:secLog,banned:Object.keys(fails).filter(k=>(fails[k].n>=8))});
     if(u==='/api/bot/test'){try{const r=await fetch('https://api.telegram.org/bot'+db.settings.botToken+'/getMe',{signal:AbortSignal.timeout(15000)});const j=await r.json();if(!j.ok)throw new Error('توکن نامعتبره');return J(res,{ok:1,bot:j.result})}catch(e){return J(res,{e:'اتصال به تلگرام ناموفق بود'},502)}}
     const b=await body(req);
+    if(b.__tooBig)return J(res,{e:'حجم درخواست زیاده'},413);
     if(u==='/api/restore'){const d=b.db||b;if(!d||!Array.isArray(d.users)||!Array.isArray(d.inbounds))return J(res,{e:'فایل بکاپ معتبر نیست'},400);
-      db.users=d.users.filter(x=>x&&x.id).slice(0,5000);db.inbounds=d.inbounds.filter(x=>x&&x.id&&x.path).slice(0,50);if(d.settings&&typeof d.settings==='object')Object.assign(db.settings,d.settings);
-      save();restartSoon();return J(res,{ok:1,n:db.users.length})}
+      const num=(v,mx)=>{v=+v;return isFinite(v)&&v>0?Math.min(v,mx||1e15):0};
+      const users=[],seenId=new Set();
+      for(const x of d.users){if(!x||typeof x.id!=='string'||!x.id||x.id.length>64||seenId.has(x.id))continue;seenId.add(x.id);
+        const days={};if(x.days&&typeof x.days==='object')for(const k of Object.keys(x.days).slice(0,60))if(/^\d{4}-\d\d-\d\d$/.test(k))days[k]=num(x.days[k]);
+        users.push({id:x.id,name:cleanName(x.name),on:x.on!==false,created:num(x.created)||Date.now(),limit:num(x.limit),exp:num(x.exp),used:num(x.used),maxDev:Math.floor(num(x.maxDev,1000)),note:String(x.note||'').slice(0,100),days,
+          ...(x.ssh&&typeof x.ssh.user==='string'&&typeof x.ssh.pass==='string'?{ssh:{user:x.ssh.user.slice(0,40),pass:x.ssh.pass.slice(0,64)}}:{})})}
+      const inbs=[],paths=new Set(),ports=new Set();
+      for(const i of d.inbounds){if(!i||typeof i.id!=='string'||!/^\/[A-Za-z0-9_-]{1,30}$/.test(String(i.path))||paths.has(i.path))continue;
+        if(!['vless','vmess','trojan'].includes(i.proto)||!['ws','httpupgrade'].includes(i.net))continue;
+        let port=Math.floor(+i.port);if(!(port>=10000&&port<65000)||port===10085||ports.has(port))port=Math.max(10000,...ports,...inbs.map(z=>z.port))+1;
+        paths.add(i.path);ports.add(port);inbs.push({id:i.id.slice(0,32),name:String(i.name||i.proto).slice(0,30),proto:i.proto,net:i.net,path:i.path,port,on:i.on!==false,loc:keepName(i.loc),...(i.egress?{egress:String(i.egress).slice(0,32)}:{})})}
+      if(!users.length&&d.users.length)return J(res,{e:'هیچ کاربر معتبری توی فایل نبود'},400);
+      if(!inbs.length)return J(res,{e:'هیچ اینباند معتبری توی فایل نبود'},400);
+      db.users=users.slice(0,5000);db.inbounds=inbs.slice(0,50);
+      if(Array.isArray(d.locs))db.locs=d.locs.filter(l=>l&&typeof l.id==='string'&&typeof l.host==='string'&&+l.port>0).slice(0,100);
+      if(Array.isArray(d.nodes))db.nodes=d.nodes.filter(n=>n&&typeof n.id==='string'&&typeof n.tokenHash==='string').slice(0,30);
+      if(d.daily&&typeof d.daily==='object'){db.daily={};for(const k of Object.keys(d.daily).slice(0,60))if(/^\d{4}-\d\d-\d\d$/.test(k))db.daily[k]=num(d.daily[k])}
+      if(d.settings&&typeof d.settings==='object'){const keep=db.settings.pass;Object.assign(db.settings,d.settings);if(typeof db.settings.pass!=='string'||db.settings.pass.length<6)db.settings.pass=keep}
+      save();restartSoon();return J(res,{ok:1,n:db.users.length,inbounds:db.inbounds.length,nodes:(db.nodes||[]).length,locs:(db.locs||[]).length})}
     if(u==='/api/users/bulk'){const ids=new Set(Array.isArray(b.ids)?b.ids:[]);if(!ids.size)return J(res,{e:'کاربری انتخاب نشده'},400);
       if(b.action==='delete'){db.users=db.users.filter(x=>!ids.has(x.id))}
       else if(b.action==='reset'){db.users.forEach(x=>{if(ids.has(x.id))x.used=0})}
@@ -844,7 +884,8 @@ http.createServer(async(req,res)=>{
       save();restartSoon();return J(res,{ok:1,name:nm})}
   }
   res.writeHead(404);res.end('Not found');
-}).on('upgrade',(req,sock,head)=>{
+}
+SERVER.on('upgrade',(req,sock,head)=>{try{
   const p=db.inbounds.find(x=>x.on&&(req.url===x.path||req.url.startsWith(x.path+'?')||req.url.startsWith(x.path+'/')));
   if(!p){if(sshWant(req))return sshAttach(req,sock,head);return sock.destroy()}
   const cip=clientIp(req),up=net.connect(p.port,'127.0.0.1',()=>{
@@ -854,4 +895,5 @@ http.createServer(async(req,res)=>{
   conns++;let done=false;const end=()=>{if(!done){done=true;conns--}sock.destroy();up.destroy()};
   sock.setNoDelay(true);up.setNoDelay(true);sock.setKeepAlive(true,30000);
   up.on('error',end);sock.on('error',end);up.on('close',end);sock.on('close',end);
+}catch(e){try{sock.destroy()}catch(_){}}
 }).listen(PORT,()=>console.log('BATAMN on',PORT));
