@@ -249,3 +249,8 @@ Run the same repo as extra projects and let the master panel manage them:
 
 The node has no panel: it pulls active users and inbounds from the master every 15 s, reports traffic and online IPs every 10 s,
 and its link appears in every user's subscription named after its location. Volume, expiry and device limits are shared.
+
+
+## Deploy anywhere
+
+See `DEPLOY.md` (Persian): VPS one-command installer (`install.sh`, Docker Compose + Caddy auto-HTTPS), `fly.toml`, `render.yaml`, and generic Docker hosts. Images build for x86 and ARM.

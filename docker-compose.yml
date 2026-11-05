@@ -1,0 +1,34 @@
+# BATAMN on any VPS: panel + Caddy (automatic HTTPS, WebSocket ready).
+# 1) point your domain's A record to this server  2) put DOMAIN and ADMIN_PASS in .env  3) docker compose up -d --build
+services:
+  panel:
+    build: .
+    restart: unless-stopped
+    environment:
+      ADMIN_PASS: ${ADMIN_PASS:?set ADMIN_PASS in .env}
+      PUBLIC_HOST: ${DOMAIN:?set DOMAIN in .env}
+      PORT: "8080"
+      DATA_DIR: /data
+      TRUST_CF: ${TRUST_CF:-0}      # 1 when the domain is behind Cloudflare's orange cloud
+    volumes:
+      - panel-data:/data
+    expose:
+      - "8080"
+  caddy:
+    image: caddy:2-alpine
+    restart: unless-stopped
+    depends_on:
+      - panel
+    ports:
+      - "80:80"
+      - "443:443"
+    environment:
+      DOMAIN: ${DOMAIN}
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy-data:/data
+      - caddy-config:/config
+volumes:
+  panel-data:
+  caddy-data:
+  caddy-config:

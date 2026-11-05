@@ -538,7 +538,7 @@ const authed=req=>{const c=(req.headers.cookie||'').split(/;\s*/).find(x=>x.star
   const[e,s]=c.slice(3).split('.');return !!s&&+e>Date.now()&&crypto.timingSafeEqual(Buffer.from(sign(e)),Buffer.from(s.padEnd(64,'x').slice(0,64)))};
 const fails={};
 const secLog=[];const secPush=(ip,ok)=>{secLog.unshift({ip,t:Date.now(),ok:!!ok});if(secLog.length>60)secLog.length=60};
-const clientIp=req=>{const x=String(req.headers['x-forwarded-for']||'').split(',').map(v=>v.trim()).filter(Boolean);return String(x[x.length-1]||req.headers['x-real-ip']||req.socket.remoteAddress||'').replace(/^::ffff:/,'')};
+const clientIp=req=>{const cf=process.env.TRUST_CF==='1'?String(req.headers['cf-connecting-ip']||'').trim():'';if(cf&&cf.length<64)return cf.replace(/^::ffff:/,'');const x=String(req.headers['x-forwarded-for']||'').split(',').map(v=>v.trim()).filter(Boolean);return String(x[x.length-1]||req.headers['x-real-ip']||req.socket.remoteAddress||'').replace(/^::ffff:/,'')};
 // speed-test helpers (only for known active users or the logged-in admin)
 const SPBUF=crypto.randomBytes(65536),spQ={};
 const spOk=(ip,add)=>{const n=Date.now(),q=spQ[ip]||(spQ[ip]={b:0,t:n});if(n-q.t>60000){q.b=0;q.t=n}if(q.b+add>300e6)return false;q.b+=add;return true};

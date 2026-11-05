@@ -1,4 +1,4 @@
-:root{--bg:#07080a;--card:rgba(17,19,23,.72);--dock:rgba(14,16,20,.86);--line:rgba(170,184,204,.15);--lr:170,184,204;--ac:#aab8cc;--ac1:#8e9eb7;--ac2:#56647a;--ac3:#d3dcea;--rgb:170,184,204;--rgb2:86,100,122;--tx:#e6eaf0;--mu:#7b8594;--ok:#4fd1a0;--bad:#ef6b7f;--warn:#e8b34a;--bgf:saturate(.1) brightness(1.1)}
+:root{--bg:#07080a;--card:rgba(17,19,23,.72);--dock:rgba(14,16,20,.86);--line:rgba(170,184,204,.15);--lr:170,184,204;--ac:#aab8cc;--ac1:#66758d;--ac2:#3b4658;--ac3:#d3dcea;--rgb:170,184,204;--rgb2:86,100,122;--tx:#e6eaf0;--mu:#7b8594;--ok:#4fd1a0;--bad:#ef6b7f;--warn:#e8b34a;--bgf:saturate(.1) brightness(1.1)}
 *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
 html,body{margin:0}
 body{background:var(--bg);color:var(--tx);font-family:var(--f);min-height:100vh;font-size:14px}
@@ -386,3 +386,15 @@ button .svgi{width:1.1em;height:1.1em}
 .dock .fab:active{transform:translateY(-14px) scale(.92)}
 .dock .fab svg{width:24px;height:24px;fill:none;stroke:currentColor;stroke-width:2.7;stroke-linecap:round;stroke-linejoin:round}
 .dock button{min-width:54px}
+
+/* ===== v10.2: readable primary buttons + clearer dock "+" ===== */
+.dock .fab{background:linear-gradient(135deg,var(--ac3),var(--ac));color:#05070b;border:3px solid var(--bg);
+ box-shadow:0 10px 24px -6px rgba(var(--rgb),.55),0 0 0 1px rgba(var(--rgb),.35)}
+.dock .fab svg{stroke-width:3}
+.dock button.on{color:#fff;background:linear-gradient(135deg,rgba(var(--rgb2),.75),rgba(var(--rgb2),.45));box-shadow:inset 0 0 0 1px rgba(var(--rgb),.4)}
+
+/* ===== v10.3: the "+" sits INSIDE the dock, centered with the other tabs (no raised/floating button) ===== */
+.dock{align-items:center}
+.dock .fab{transform:none!important;width:46px;height:46px;margin:0 6px;border:0;align-self:center;box-shadow:0 4px 14px -4px rgba(var(--rgb),.6)}
+.dock .fab:active{transform:scale(.92)!important}
+.dock .fab svg{width:22px;height:22px}

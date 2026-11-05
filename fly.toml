@@ -1,0 +1,33 @@
+# Fly.io: `fly launch --no-deploy` (keep this file), `fly volumes create batamn_data --size 1`,
+# `fly secrets set ADMIN_PASS=...`, then `fly deploy`.
+app = "batamn-change-me"
+primary_region = "ams"
+
+[build]
+  dockerfile = "Dockerfile"
+
+[env]
+  PORT = "8080"
+  DATA_DIR = "/data"
+
+[mounts]
+  source = "batamn_data"
+  destination = "/data"
+
+[http_service]
+  internal_port = 8080
+  force_https = true
+  auto_stop_machines = "off"
+  auto_start_machines = true
+  min_machines_running = 1
+
+  [[http_service.checks]]
+    grace_period = "25s"
+    interval = "30s"
+    method = "GET"
+    path = "/health"
+    timeout = "5s"
+
+[[vm]]
+  size = "shared-cpu-1x"
+  memory = "512mb"

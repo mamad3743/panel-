@@ -1,0 +1,21 @@
+# Render Blueprint. A persistent disk requires a paid instance type.
+services:
+  - type: web
+    name: batamn
+    runtime: docker
+    dockerfilePath: ./Dockerfile
+    plan: starter
+    healthCheckPath: /health
+    envVars:
+      - key: ADMIN_PASS
+        sync: false
+      - key: PUBLIC_HOST        # optional: your custom domain
+        sync: false
+      - key: PORT
+        value: "8080"
+      - key: DATA_DIR
+        value: /data
+    disk:
+      name: batamn-data
+      mountPath: /data
+      sizeGB: 1
